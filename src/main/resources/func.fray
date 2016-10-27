@@ -1,0 +1,8 @@
+fn sum(set) {
+    let sum = 0;
+
+    for (i : set)
+        sum += i;
+
+    ret sum;
+}
