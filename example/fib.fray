@@ -2,7 +2,7 @@ import <func> as F
 
 fn fib(n) {
   ret F.decide({
-    n <= 1 : () => n
+    n <= 1 : n
   }).or(() => F.sum([
     fib(n - 1),
     fib(n - 2)
