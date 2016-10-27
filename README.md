@@ -8,7 +8,7 @@ The interpreter will only include:
   - foreach (for only if necessary)
 - Functions
 - Expressions
-  - [i..j]
+  - [i..j], [i...j]
   - Assignment
   - Function Expressions
   - Identifiers

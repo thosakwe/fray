@@ -1,0 +1,15 @@
+import <func> as F
+
+fn fib(n) {
+  ret F.decide({
+    n <= 1 : () => n
+  }).or(() => F.sum([
+    fib(n - 1),
+    fib(n - 2)
+  ]));
+}
+
+fn main() {
+  final n = 13;
+  print('The %nth Fibonacci number is %{fib(n)}.');
+}

@@ -1,0 +1,10 @@
+import <func> as F
+
+fn main() =>
+    F.for([1 .. 100])
+        .map(n => F.decide({
+            n % 3 == 0 && n % 5 == 0 : 'FizzBuzz',
+            n % 3 == 0 : 'Fizz',
+            n % 5 == 0 : 'Buzz'
+        }))
+        .all(print)
