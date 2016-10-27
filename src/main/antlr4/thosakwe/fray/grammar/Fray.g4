@@ -31,8 +31,11 @@ UNARY_OPERATOR: '!' | '++' | '--';
 // Keywords
 AS: 'as';
 CATCH: 'catch';
+CLASS: 'class';
 DO: 'do';
 ELSE: 'else';
+EXTENDS: 'extends';
+FIELD: 'field';
 FINAL: 'final';
 FINALLY: 'finally';
 FN: 'fn';
@@ -74,16 +77,23 @@ shebang: SHEBANG;
 topLevelDefinition:
     emptyDeclaration
     | importDeclaration
-    | topLevelFunctionDefinition;
+    | topLevelFunctionDefinition
+    | topLevelVariableDeclaration
+    | classDefinition;
 
 emptyDeclaration: SEMI;
-importDeclaration: IMPORT importOf? source=importSource importAs? SEMI?;
+importDeclaration: annotations=annotation* IMPORT importOf? source=importSource importAs? SEMI?;
 importOf: SQUARE_L ((names+=IDENTIFIER COMMA)* names+=IDENTIFIER COMMA?)? SQUARE_R OF;
 importSource: standardImport | STRING | RAW_STRING;
 standardImport: LT source=IDENTIFIER GT;
 importAs: AS alias=IDENTIFIER;
 
 topLevelFunctionDefinition: functionSignature functionBody SEMI?;
+topLevelVariableDeclaration: annotations=annotation* (FINAL | LET) (variableDeclaration COMMA)* variableDeclaration SEMI?;
+
+classDefinition:
+    annotations=annotation* CLASS name=IDENTIFIER (EXTENDS superClass=expression)? CURLY_L (topLevelFunctionDefinition | topLevelVariableDeclaration)* CURLY_R
+;
 
 functionSignature: annotations=annotation* FN name=IDENTIFIER;
 annotation: ARROBA target=expression;
@@ -98,7 +108,7 @@ block: (statement SEMI?) | (CURLY_L (statement SEMI?)* CURLY_R);
 statement:
     SEMI #EmptyStatement
     | expression #ExpressionStatement
-    | (FINAL | LET) (assignment COMMA)* assignment #VariableDeclarationStatement
+    | annotations=annotation* (FINAL | LET) (variableDeclaration COMMA)* variableDeclaration #VariableDeclarationStatement
     | RET expression #ReturnStatement
     | THROW expression #ThrowStatement
     | FOR PAREN_L as=IDENTIFIER COLON in=expression PAREN_R block #ForStatement
@@ -114,7 +124,7 @@ ifBlock: IF PAREN_L condition=expression PAREN_R block;
 elseBlock: ELSE block;
 
 // controlFlowStatement: ;
-assignment: expression assignmentOperator expression;
+variableDeclaration: name=IDENTIFIER (assignmentOperator expression)?;
 
 expression:
     IDENTIFIER #IdentifierExpression

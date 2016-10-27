@@ -1,0 +1,5 @@
+class Foo {
+    let a, b, c = 3;
+
+    fn bar() => 'baz';
+}
