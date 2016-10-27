@@ -44,8 +44,11 @@ IF: 'if';
 IMPORT: 'import';
 LET: 'let';
 NEW: 'new';
+NULL: 'null';
 OF: 'of';
 RET: 'ret';
+SUPER: 'super';
+THIS: 'this';
 THROW: 'throw';
 TRY: 'try';
 WHILE: 'while';
@@ -131,6 +134,9 @@ expression:
     | (DOUBLE | HEX | INT) #NumericalLiteralExpression
     | string #StringLiteralExpression
     | (TRUE | FALSE) #BooleanLiteralExpression
+    | NULL #NullLiteralExpression
+    | THIS #ThisExpression
+    | SUPER DOT member=IDENTIFIER #SuperExpression
     | expression DOT IDENTIFIER #MemberExpression
     | expression assignmentOperator expression #AssignmentExpression
     | NEW type=expression PAREN_L ((args+=expression COMMA)* args+=expression)? COMMA? PAREN_R #NewExpression
