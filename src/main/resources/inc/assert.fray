@@ -1,0 +1,12 @@
+fn equal(left, right) {
+    if (left != right)
+        throw new Exception('%left does not equal %right.');
+}
+
+fn notEqual(left, right) {
+    try {
+        equal(left == right, false);
+    } catch(_) {
+        throw new Exception('%left should not equal %right, but it does.');
+    }
+}

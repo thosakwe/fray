@@ -1,0 +1,23 @@
+fn main() {
+    final t = true, f = false;
+
+    if (t) {
+        print('t is true.');
+    } else print('Am I insane???');
+
+    if (f) {
+        print('Ok, I am insane. False is true now???');
+    } else print('f is false.');
+
+    if (t || f) {
+        print('t || f = true, good');
+    } else print('t || f = false???');
+
+    if (t && f) {
+        print('t && f == true???');
+    } else print('t && f = false, good.');
+
+    print(2 == 3);
+    print(2 == 2);
+    print(6 == (2 * 3));
+}

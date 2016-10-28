@@ -2,12 +2,12 @@ package thosakwe.fray.lang;
 
 import thosakwe.fray.lang.data.FrayDatum;
 
-class Symbol {
+public class Symbol {
     private boolean _isFinal = false;
     private final String name;
     private FrayDatum value;
 
-    Symbol(String name, FrayDatum value, boolean isFinal) {
+    public Symbol(String name, FrayDatum value, boolean isFinal) {
         this._isFinal = isFinal;
         this.name = name;
         this.value = value;
@@ -22,7 +22,7 @@ class Symbol {
         return name;
     }
 
-    FrayDatum getValue() {
+    public FrayDatum getValue() {
         return value;
     }
 

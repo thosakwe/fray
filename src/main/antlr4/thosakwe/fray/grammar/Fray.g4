@@ -1,4 +1,4 @@
-// Yes, this grammar has locals. Deal with it.
+// Todo: continue, break
 grammar Fray;
 
 SL_CMT: ('#' | '//') ~('\n')* -> channel(HIDDEN);
@@ -33,6 +33,7 @@ UNARY_OPERATOR: '!' | '++' | '--';
 AS: 'as';
 CATCH: 'catch';
 CLASS: 'class';
+CONSTRUCTOR: 'constructor';
 DO: 'do';
 ELSE: 'else';
 EXTENDS: 'extends';
@@ -83,7 +84,8 @@ topLevelDefinition:
     | importDeclaration
     | topLevelFunctionDefinition
     | topLevelVariableDeclaration
-    | classDefinition;
+    | classDefinition
+    | topLevelStatement;
 
 emptyDeclaration: SEMI;
 importDeclaration: annotations=annotation* IMPORT importOf? source=importSource importAs? SEMI?;
@@ -94,10 +96,13 @@ importAs: AS alias=IDENTIFIER;
 
 topLevelFunctionDefinition: functionSignature functionBody SEMI?;
 topLevelVariableDeclaration: annotations=annotation* (FINAL | LET) (variableDeclaration COMMA)* variableDeclaration SEMI?;
+topLevelStatement: statement;
 
 classDefinition:
-    annotations=annotation* CLASS name=IDENTIFIER (EXTENDS superClass=expression)? CURLY_L (topLevelFunctionDefinition | topLevelVariableDeclaration)* CURLY_R
+    annotations=annotation* CLASS name=IDENTIFIER (EXTENDS superClass=expression)? CURLY_L (constructorDefinition | topLevelFunctionDefinition | topLevelVariableDeclaration)* CURLY_R
 ;
+
+constructorDefinition: annotations=annotation* CONSTRUCTOR (name=IDENTIFIER)? functionBody;
 
 functionSignature: annotations=annotation* FN name=IDENTIFIER;
 annotation: ARROBA target=expression;
@@ -115,7 +120,7 @@ statement:
     | annotations=annotation* (FINAL | LET) (variableDeclaration COMMA)* variableDeclaration #VariableDeclarationStatement
     | RET expression #ReturnStatement
     | THROW expression #ThrowStatement
-    | FOR PAREN_L as=IDENTIFIER COLON in=expression PAREN_R block #ForStatement
+    | FOR PAREN_L (FINAL|LET)? as=IDENTIFIER COLON in=expression PAREN_R block #ForStatement
     | main=ifBlock (ELSE elseIf+=ifBlock)* elseBlock? #IfStatement
     | WHILE PAREN_L condition=expression PAREN_R block #WhileStatement
     | DO block WHILE PAREN_L condition=expression PAREN_R #DoWhileStatement
@@ -132,16 +137,16 @@ variableDeclaration: name=IDENTIFIER (assignmentOperator expression)?;
 
 expression:
     IDENTIFIER #IdentifierExpression
-    | (DOUBLE | HEX | INT) #NumericalLiteralExpression
+    | (DOUBLE | HEX | INT) #NumericLiteralExpression
     | string #StringLiteralExpression
     | (TRUE | FALSE) #BooleanLiteralExpression
     | NULL #NullLiteralExpression
     | THIS #ThisExpression
     | SUPER DOT member=IDENTIFIER #SuperExpression
     | expression DOT IDENTIFIER #MemberExpression
-    | expression assignmentOperator expression #AssignmentExpression
+    | left=expression assignmentOperator right=expression #AssignmentExpression
     | NEW type=expression PAREN_L ((args+=expression COMMA)* args+=expression)? COMMA? PAREN_R #NewExpression
-    | expression binaryOperator expression #BinaryExpression
+    | left=expression binaryOperator right=expression #BinaryExpression
     | unaryOperator expression #UnaryPrefixExpression
     | expression unaryOperator #UnaryPostfixExpression
     | condition=expression QUESTION yes=expression COLON no=expression #TernaryExpression

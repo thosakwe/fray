@@ -1,0 +1,3 @@
+import <func> as F;
+
+fn main() => print(F.sum([1..4]));

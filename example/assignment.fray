@@ -1,0 +1,11 @@
+fn main() {
+    let i = 3;
+
+    // Shorthand assignment operators are expanded.
+    // internally by the interpreter.
+    i += 2;
+
+    // For example, the above is expanded to "i = i + 2".
+    print(i);
+    print(i == 5);
+}

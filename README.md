@@ -41,3 +41,12 @@ The interpreter will only include:
 
 *All* additional functionality can hopefully be
 implemented in Fray, in the form of libraries.
+
+
+# Todo
+- Custom stack traces
+- Source maps :)
+- Get hashmap of symbols in scope
+    - Print like in Node, with curses too
+- Tree shaker
+    - Just run this through asset pipeline :)

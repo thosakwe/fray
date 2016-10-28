@@ -1,0 +1,10 @@
+import <assert> as assert;
+import <test>;
+
+fn main() {
+    final runner = new TestRunner();
+
+    runner.test('equality', () {
+        assert.equal(1, 1);
+    });
+}

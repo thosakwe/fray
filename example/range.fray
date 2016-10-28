@@ -1,0 +1,11 @@
+fn main() {
+    // Three dots makes a range exclusive
+    print([1 ... 10]);
+
+    print('All numbers from 1 to 3:');
+
+    // Two dots will include the upper bound :)
+    for (final i : [1 .. 3]) {
+        print(i);
+    }
+}

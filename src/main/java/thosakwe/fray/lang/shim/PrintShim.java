@@ -11,8 +11,8 @@ import java.util.List;
 
 public class PrintShim implements Shim {
     @Override
-    public void inject(FrayInterpreter interpreter) {
-        interpreter.getSymbolTable().setValue("print", new FrayFunction(null) {
+    public void inject(FrayInterpreter interpreter) throws FrayException {
+        interpreter.getSymbolTable().setValue("print", new FrayFunction(null, interpreter) {
             @Override
             public FrayDatum call(FrayInterpreter interpreter, ParseTree source, List<FrayDatum> args) throws FrayException {
                 if (args.size() != 1)
@@ -25,6 +25,6 @@ public class PrintShim implements Shim {
             public String toString() {
                 return "[print]";
             }
-        }, true);
+        }, null, interpreter, true);
     }
 }

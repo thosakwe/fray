@@ -1,0 +1,46 @@
+import <func> as F;
+
+// Todo: indentation???
+class TestSuite {
+    let name;
+    final tests = {};
+
+    constructor(name) {
+        this.name = name;
+    }
+
+    fn _run() {
+        tests.forEach((name, run) {
+           try
+                print('SUCCESS: %name');
+           catch(e) {
+                print(e.message);
+                print(e.stack);
+                print('FAILURE: %name');
+           }
+        });
+    }
+
+    fn test(name, test) {
+        this.tests.set(name, test);
+        return this;
+    }
+}
+
+class TestRunner {
+    final _rootSuite = new TestSuite();
+    final _suites = [_rootSuite];
+
+    fn run() => F.src(_suites).all(suite => suite._run());
+
+    fn suite(name) {
+        final suite = new Suite(name);
+        _suites.add(suite);
+        return suite;
+    }
+
+    fn test(name, test) {
+        this._rootSuite(name, test);
+        return this;
+    }
+}

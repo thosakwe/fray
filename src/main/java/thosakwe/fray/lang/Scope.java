@@ -1,14 +1,18 @@
 package thosakwe.fray.lang;
 
+import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.lang.data.FrayDatum;
+import thosakwe.fray.lang.errors.FrayException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Scope {
     private Scope child = null;
-    private Scope parent = null;
     private final List<Symbol> symbols = new ArrayList<>();
+    private Scope parent = null;
+    private FrayDatum thisContext = null;
 
     private Scope getInnerMostScope() {
         Scope innermost = this;
@@ -20,9 +24,10 @@ public class Scope {
     }
 
     public void create() {
-        final Scope scope = new Scope();
-        scope.parent = this;
-        child = scope;
+        final Scope innermost = getInnerMostScope();
+        final Scope child = new Scope();
+        child.parent = innermost;
+        innermost.child = child;
     }
 
     public Symbol getSymbol(String name) {
@@ -50,17 +55,22 @@ public class Scope {
     }
 
     public void destroy() {
-        if (child != null)
-            child = null;
+        final Scope innermost = getInnerMostScope();
+
+        if (innermost.parent != null) {
+            innermost.parent.child = null;
+        }
     }
 
     public void dumpSymbols() {
         int level = 1;
         Scope currentScope = this;
+        System.out.println("DUMPING SYMBOLS:");
 
         do {
             if (!currentScope.symbols.isEmpty())
                 System.out.printf("Level %d (%d symbol(s)):%n", level++, currentScope.symbols.size());
+            else System.out.printf("Level %d (empty)%n", level++);
 
             for (Symbol symbol : currentScope.symbols) {
                 System.out.printf("  - %s: ", symbol.getName());
@@ -69,17 +79,21 @@ public class Scope {
 
             currentScope = currentScope.child;
         } while (currentScope != null);
-
-        System.out.println("Done dumping.");
     }
 
-    public void load(Scope other) {
+    public void load(Scope other, boolean importPrivate) {
         create();
 
         // Go top to bottom
         Scope currentScope = other;
         do {
-            getInnerMostScope().symbols.addAll(currentScope.symbols);
+            final Scope innermost = getInnerMostScope();
+
+            innermost.symbols
+                    .addAll(currentScope.symbols.stream()
+                            .filter(symbol -> !symbol.getName().startsWith("_") || importPrivate)
+                            .collect(Collectors.toList()));
+
             currentScope = currentScope.child;
 
             if (currentScope != null)
@@ -87,11 +101,59 @@ public class Scope {
         } while (currentScope != null);
     }
 
-    public void setValue(String name, FrayDatum value, boolean isFinal) {
-        getInnerMostScope().symbols.add(new Symbol(name, value, isFinal));
+    public void load(Scope other) {
+        load(other, false);
     }
 
-    public void setValue(String name, FrayDatum value) {
-        setValue(name, value, false);
+    public void setValue(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter, boolean isFinal) throws FrayException {
+        final Symbol resolved = getSymbol(name);
+
+        if (resolved == null) {
+            getInnerMostScope().symbols.add(new Symbol(name, value, isFinal));
+        } else if (!resolved.isFinal())
+            resolved.setValue(value);
+        else
+            throw new FrayException(String.format("Cannot overwrite final variable '%s'.", resolved.getName()), source, interpreter);
+
+    }
+
+    public void setValue(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter) throws FrayException {
+        setValue(name, value, source, interpreter, false);
+    }
+
+    public List<Symbol> getSymbols() {
+        return symbols;
+    }
+
+    public Symbol resolveOrCreate(String name) {
+        final Symbol resolved = getSymbol(name);
+
+        if (resolved != null)
+            return resolved;
+        else {
+            final Symbol symbol = new Symbol(name, null);
+            getInnerMostScope().symbols.add(symbol);
+            return symbol;
+        }
+    }
+
+    public void createNew(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter, boolean isFinal) throws FrayException {
+        final List<Symbol> symbols = getInnerMostScope().symbols;
+        Symbol predefined = null;
+
+        for (Symbol symbol : symbols) {
+            if (symbol.getName().equals(name))
+                predefined = symbol;
+        }
+
+        if (predefined != null)
+            throw new FrayException(String.format("Symbol '%s' is already defined with this scope.", name), source, interpreter);
+        else {
+            symbols.add(new Symbol(name, value, isFinal));
+        }
+    }
+
+    public void createNew(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter) throws FrayException {
+        createNew(name, value, source, interpreter, false);
     }
 }
