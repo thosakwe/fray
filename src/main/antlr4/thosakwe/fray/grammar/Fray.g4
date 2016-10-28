@@ -18,6 +18,7 @@ PAREN_R: ')';
 SEMI: ';';
 SQUARE_L: '[';
 SQUARE_R: ']';
+QUESTION: '?';
 
 // Operators
 // Todo: precedence
@@ -87,7 +88,7 @@ topLevelDefinition:
 emptyDeclaration: SEMI;
 importDeclaration: annotations=annotation* IMPORT importOf? source=importSource importAs? SEMI?;
 importOf: SQUARE_L ((names+=IDENTIFIER COMMA)* names+=IDENTIFIER COMMA?)? SQUARE_R OF;
-importSource: standardImport | STRING | RAW_STRING;
+importSource: standardImport | string;
 standardImport: LT source=IDENTIFIER GT;
 importAs: AS alias=IDENTIFIER;
 
@@ -101,8 +102,8 @@ classDefinition:
 functionSignature: annotations=annotation* FN name=IDENTIFIER;
 annotation: ARROBA target=expression;
 
-functionBody: arguments (blockBody | expressionBody);
-arguments: names+=IDENTIFIER | (PAREN_L ((names+=IDENTIFIER COMMA)* names+=IDENTIFIER)? COMMA? PAREN_R);
+functionBody: parameters (blockBody | expressionBody);
+parameters: names+=IDENTIFIER | (PAREN_L ((names+=IDENTIFIER COMMA)* names+=IDENTIFIER)? COMMA? PAREN_R);
 blockBody: block;
 expressionBody: ARROW expression;
 
@@ -143,7 +144,8 @@ expression:
     | expression binaryOperator expression #BinaryExpression
     | unaryOperator expression #UnaryPrefixExpression
     | expression unaryOperator #UnaryPostfixExpression
-    | target=expression PAREN_L ((args+=expression COMMA)* args+=expression)? COMMA? PAREN_R #InvocationExpression
+    | condition=expression QUESTION yes=expression COLON no=expression #TernaryExpression
+    | callee=expression PAREN_L ((args+=expression COMMA)* args+=expression)? COMMA? PAREN_R #InvocationExpression
     | SQUARE_L lower=expression DOT DOT upper=expression SQUARE_R #InclusiveRangeExpression
     | SQUARE_L lower=expression DOT DOT DOT upper=expression SQUARE_R #ExclusiveRangeExpression
     | target=expression SQUARE_L index=expression SQUARE_R #SetIndexerExpression
