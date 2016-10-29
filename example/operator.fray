@@ -1,0 +1,11 @@
+// Use an annotation to register a function as a custom operator.
+
+class CustomOperator {
+    @operator('+')
+    fn custom(right) => 'Custom operator called against %right';
+}
+
+fn main() {
+    final op = new CustomOperator();
+    print(op + 2);
+}

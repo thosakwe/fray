@@ -386,15 +386,35 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
 
                     // Now add methods
                     for (FrayParser.TopLevelFunctionDefinitionContext def : ctx.topLevelFunctionDefinition()) {
-                        final String name1 = def.functionSignature().name.getText();
-                        final FrayFunction function = compileFunctionBody(def.functionBody(), name1, instance);
-                        printDebug(String.format("Created method on %s: %s => %s", instance, name1, function));
-                        instance.getSymbolTable().setValue(name1, function, def, getInterpreter(), true);
-                    }
+                        final String methodName = def.functionSignature().name.getText();
+                        final FrayFunction function = compileFunctionBody(def.functionBody(), methodName, instance);
+                        printDebug(String.format("Created method on %s: %s => %s", instance, methodName, function));
+                        instance.getSymbolTable().setValue(methodName, function, def, getInterpreter(), true);
 
-                    getInterpreter().getSymbolTable().getInnerMostScope().setThisContext(instance);
-                    getInterpreter().getSymbolTable().destroy();
-                    getInterpreter().getStack().pop();
+                        // Custom operators
+                        for (FrayParser.AnnotationContext annotation : def.functionSignature().annotation()) {
+                            if (annotation.expression() instanceof FrayParser.InvocationExpressionContext) {
+                                final FrayParser.InvocationExpressionContext invocation = (FrayParser.InvocationExpressionContext) annotation.expression();
+
+                                if (invocation.callee instanceof FrayParser.IdentifierExpressionContext) {
+                                    final String id = invocation.callee.getText();
+
+                                    if (id.equals("operator") && invocation.args.size() == 1) {
+                                        final FrayDatum arg = visitExpression(invocation.args.get(0));
+
+                                        if (arg instanceof FrayString) {
+                                            instance.getOperators().put(arg.toString(), function);
+                                            printDebug(String.format("Registered custom operator: %s => %s", arg, function));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        getInterpreter().getSymbolTable().getInnerMostScope().setThisContext(instance);
+                        getInterpreter().getSymbolTable().destroy();
+                        getInterpreter().getStack().pop();
+                    }
 
                     return instance;
                 }
@@ -431,9 +451,13 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
 
             printDebug("All constructors:");
 
-            type.getConstructors().forEach((k, v) -> {
-                printDebug(String.format("'%s': %s", k, v));
-            });
+            type.getConstructors().
+
+                    forEach((k, v) ->
+
+                    {
+                        printDebug(String.format("'%s': %s", k, v));
+                    });
         } catch (FrayException exc) {
             errors.add(exc);
         }
