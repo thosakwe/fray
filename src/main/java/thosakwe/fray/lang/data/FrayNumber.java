@@ -46,6 +46,12 @@ public class FrayNumber extends FrayDatum {
             return new FrayNumber(source, getInterpreter(), getValue() + ((FrayNumber) right).getValue());
         throw new FrayException(String.format("Expression is not a number: '%s'", right.toString()), source, getInterpreter());
     }
+    @Override
+    public FrayDatum times(ParseTree source, FrayDatum right) throws FrayException {
+        if (right instanceof FrayNumber)
+            return new FrayNumber(source, getInterpreter(), getValue() * ((FrayNumber) right).getValue());
+        throw new FrayException(String.format("Expression is not a number: '%s'", right.toString()), source, getInterpreter());
+    }
 
     @Override
     public String toString() {

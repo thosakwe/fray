@@ -12,11 +12,11 @@ class TestSuite {
     fn _run() {
         tests.forEach((name, run) {
            try
-                print('SUCCESS: %name');
+                print('\033[32mSUCCESS: %name');
            catch(e) {
                 print(e.message);
                 print(e.stack);
-                print('FAILURE: %name');
+                print('\033[31mFAILURE: %name');
            }
         });
     }

@@ -1,42 +1,30 @@
 # fray
 
-The interpreter will only include:
-- Controls
-- Imports
-- Loops
-  - do-while, while
-  - foreach (for only if necessary)
-- Functions
+The interpreter willy include:
+- Control flow
+    - break
+    - continue
+- Private variables
+- Functions should be closures
 - Expressions
-  - [i..j], [i...j]
   - Assignment
-  - Function Expressions
   - Identifiers
     - Simple and Prefixed
   - Indexers
-  - Invocations
   - Numbers
-    - Double
-    - Hex
-    - Int
     - Long
   - Literals
-    - Boolean
     - Dictionary
-    - Set
-  - Parentheses
   - Operators
     - Unary
-      - Prefix: !, ++, --
+      - Prefix: !, ++, -- (turn the latter two into += and -= with transformer)
       - Postfix: ++, --
     - Binary
-      - Aritmetic: +, -, *, /, %, ^
-      - Assignment: +=, -=, *=, /=, %=, ^=, =
-      - Boolean: ==, !=, <, <=, >, >=, &&, ||
+      - Arithmetic: -, /, ^
+      - Boolean: !=, <, <=, >, >=
   - Strings
     - Raw
-    - Simple
-- String Interpolation
+    - String Interpolation
 
 
 *All* additional functionality can hopefully be
@@ -50,8 +38,10 @@ implemented in Fray, in the form of libraries.
     - Print like in Node, with curses too
 - Tree shaker
     - Just run this through asset pipeline :)
+- Access members through `getField` instead of directly touching symbol table
+    - `Extensible` shim
     
-## Tree Shaker
+## Dead Code Removal
 
 *Should remove all unused functions and variables intuitively.*
 
@@ -74,3 +64,78 @@ declarations. :)
     - One usage: Suggest making into a local variable
         - Only suggest this if variable is referenced in a child scope
 2. Detect non-existent member references - should also be easy :)
+
+## Compiler
+
+1. Tree-shake
+    - This means build a new file, only including what we used
+        - Not just removing dead code
+        - Should be relatively easy for Fray following dead code removal :)
+2. Transform libraries into static objects
+    - Use an `Extensible`
+        - Perhaps include a variant that sets everything `final`?
+3. Minify
+    - Rename all identifiers to the shortest available variant
+4. Transpile
+    - Use a visitor
+    
+### Compile to JS?
+
+foo.fray
+
+```fray
+class Foo {
+    let bar;
+    
+    constructor(bar) {
+        this.bar = bar;
+    }
+    
+    fn greet() => 'Hello, %{this.bar}!';
+}
+
+fn main() => new Foo('world').greet();
+```
+
+foo.js (ES5)
+
+```js
+(function() {
+    function Foo(bar) {
+        this.bar = bar;
+    }
+    
+    Foo.prototype.greet = function() {
+        return 'Hello, ' + this.bar + '!';
+    }
+    
+    function main() {
+        new Foo('world').greet();
+    }
+    
+    return main([]);
+})();
+
+```
+
+foo.js (ES6)
+
+```js
+class Foo {
+    constructor(bar) {
+        this.bar = bar;
+    }
+    
+    greet() {
+        return `Hello, ${bar}!`;
+    }
+}
+
+function main() {
+    new Foo('world').greet();
+}
+
+main([]);
+```
+
+ES6 compilation would be nice, but wouldn't work in the browser out-of-the-box.

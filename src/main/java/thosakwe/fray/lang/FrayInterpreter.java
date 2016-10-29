@@ -1,24 +1,27 @@
 package thosakwe.fray.lang;
 
-import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.cli.CommandLine;
 import thosakwe.fray.grammar.FrayBaseVisitor;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.lang.data.*;
 import thosakwe.fray.lang.errors.FrayException;
+import thosakwe.fray.lang.errors.FrayExceptionDatum;
 import thosakwe.fray.lang.pipeline.FrayAsset;
 import thosakwe.fray.lang.pipeline.FrayPipeline;
+import thosakwe.fray.lang.shim.ExceptionShim;
 import thosakwe.fray.lang.shim.PrintShim;
 import thosakwe.fray.lang.shim.ProcessShim;
-import thosakwe.fray.lang.shim.Shim;
+import thosakwe.fray.lang.shim.FrayShim;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.IOException;
 import java.net.URL;
+import java.text.DecimalFormat;
+import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,34 +30,39 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     private static final String QUOTES = "(^r?')|('$)";
     private final CommandLine commandLine;
     private final boolean debug;
+    final DecimalFormat df = new DecimalFormat();
     private final List<FrayException> errors = new ArrayList<>();
-    // private FrayFunction mainFunction;
+    private FrayAsset source;
+    private final FrayStack stack = new FrayStack(this);
     private final Scope symbolTable = new Scope();
     private final List<FrayException> warnings = new ArrayList<>();
     private final FrayPipeline pipeline;
 
-    public FrayInterpreter(CommandLine commandLine, FrayPipeline pipeline) throws FrayException {
+    public FrayInterpreter(CommandLine commandLine, FrayPipeline pipeline, FrayAsset source) throws FrayException {
         this.commandLine = commandLine;
         this.debug = commandLine.hasOption("verbose");
         this.pipeline = pipeline;
+        this.source = source;
 
-        final List<Shim> shims = new ArrayList<>();
+        final List<FrayShim> shims = new ArrayList<>();
 
+        shims.add(new ExceptionShim());
         shims.add(new PrintShim());
         shims.add(new ProcessShim());
 
-        for (Shim shim : shims) {
+        for (FrayShim shim : shims) {
             shim.inject(this);
         }
     }
 
-    private FrayFunction compileFunctionBody(FrayParser.FunctionBodyContext ctx) {
+    private FrayFunction compileFunctionBody(FrayParser.FunctionBodyContext ctx, String functionName) {
         return new FrayFunction(ctx, this) {
             @Override
             public FrayDatum call(FrayInterpreter interpreter, ParseTree source, List<FrayDatum> args) throws FrayException {
                 // Todo: Inject params
                 printDebug(String.format("Now running this function: '%s'", ctx.getText()));
                 symbolTable.create();
+                interpreter.getStack().push(new FrayStackElement(toString(), interpreter.getSource().getSourcePath(), ctx));
                 printDebug("Injecting arguments...");
 
                 for (int i = 0; i < ctx.parameters().IDENTIFIER().size(); i++) {
@@ -65,6 +73,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
                 }
 
                 final FrayDatum result = visitFunctionBody(ctx);
+                interpreter.getStack().pop();
                 symbolTable.destroy();
                 printDebug(String.format("Result of running function: %s", String.valueOf(result)));
                 return result;
@@ -72,6 +81,8 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
 
             @Override
             public String toString() {
+                if (functionName != null)
+                    return String.format("[%s:%s]", functionName, ctx.parameters().getText());
                 return String.format("[Function:%s]", ctx.parameters().getText());
             }
 
@@ -82,12 +93,28 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
         };
     }
 
+    private boolean conditionIsTrue(FrayParser.ExpressionContext ctx) {
+        final FrayDatum condition = visitExpression(ctx);
+        stack.push(new FrayStackElement("condition", source.getSourcePath(), ctx));
+        final boolean result = condition instanceof FrayBoolean && ((FrayBoolean) condition).getValue();
+        stack.pop();
+        return result;
+    }
+
     public List<FrayException> getErrors() {
         return errors;
     }
 
     public FrayPipeline getPipeline() {
         return pipeline;
+    }
+
+    public FrayStack getStack() {
+        return stack;
+    }
+
+    public FrayAsset getSource() {
+        return source;
     }
 
     public Scope getSymbolTable() {
@@ -98,10 +125,67 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
         return warnings;
     }
 
+    private void importSymbols(Scope from, Scope to, FrayParser.ImportOfContext ofContext) throws FrayException {
+        if (ofContext == null) {
+            to.load(from);
+        } else {
+            for (TerminalNode id : ofContext.IDENTIFIER()) {
+                final String name = id.getText();
+                final Symbol symbol = from.getSymbol(name);
+
+                if (symbol == null) {
+                    printDebug(String.format("Hmm, library doesn't contain '%s'.", name));
+                    printDebug("However, it does contain:");
+
+                    if (debug)
+                        from.dumpSymbols();
+
+                    throw new FrayException(String.format("Library does not export a member called '%s'.", name), id, this);
+                }
+
+                to.getSymbols().add(symbol);
+            }
+        }
+    }
+
+    public boolean isDebug() {
+        return debug;
+    }
+
+    private Scope loadLibrary(FrayParser.ImportSourceContext ctx) throws IOException, FrayException {
+        FrayAsset asset;
+
+        if (ctx.string() != null) {
+            final String filename = ctx.string().getText().replaceAll(QUOTES, "") + ".fray";
+            printDebug(String.format("Now importing '%s'...", filename));
+            asset = FrayAsset.forFile(filename);
+        } else if (ctx.standardImport() != null) {
+            final String name = ctx.standardImport().source.getText();
+            final String resourceName = String.format("inc/%s.fray", name);
+            printDebug(String.format("Now importing resource from stdlib: '%s'", resourceName));
+            final URL url = FrayInterpreter.class.getClassLoader().getResource(resourceName);
+            asset = FrayAsset.forUrl(url);
+        } else
+            throw new FrayException(String.format("Invalid source given for import: '%s'", ctx.getText()), ctx, this);
+
+        final FrayAsset processed = pipeline.transform(asset);
+        final FrayLexer lexer = new FrayLexer(new ANTLRInputStream(processed.getInputStream()));
+        final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+        final FrayParser parser = new FrayParser(tokenStream);
+        final FrayParser.CompilationUnitContext compilationUnitContext = parser.compilationUnit();
+        final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline, processed);
+        interpreter.visitCompilationUnit(compilationUnitContext);
+        return interpreter.symbolTable;
+    }
+
     public void printDebug(String message) {
         if (debug) {
             System.out.println(message);
         }
+    }
+
+    public void setSource(FrayAsset source) {
+        this.source = source;
     }
 
     @Override
@@ -186,10 +270,26 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     @Override
     public FrayDatum visitBlock(FrayParser.BlockContext ctx) {
         // Todo: Handle returns and breaks
-        for (FrayParser.StatementContext stmt : ctx.statement()) {
-            if (stmt instanceof FrayParser.ReturnStatementContext)
-                return visitExpression(((FrayParser.ReturnStatementContext) stmt).expression());
-            else visitStatement(stmt);
+
+        try {
+            for (FrayParser.StatementContext stmt : ctx.statement()) {
+                if (stmt instanceof FrayParser.ReturnStatementContext)
+                    return visitExpression(((FrayParser.ReturnStatementContext) stmt).expression());
+                else if (stmt instanceof FrayParser.ThrowStatementContext) {
+                    final FrayParser.ExpressionContext expression = ((FrayParser.ThrowStatementContext) stmt).expression();
+                    final FrayDatum exception = visitExpression(expression);
+
+                    if (!(exception instanceof FrayExceptionDatum))
+                        throw new FrayException("You can only throw instances of Exception.", expression, this);
+                    else {
+                        throw ((FrayExceptionDatum) exception).toException();
+                    }
+                } else visitStatement(stmt);
+            }
+        } catch (FrayException exc) {
+            errors.add(exc);
+            System.err.println(exc.toString());
+            exc.printStackTrace();
         }
 
         return null;
@@ -230,6 +330,14 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     }
 
     @Override
+    public FrayDatum visitDoWhileStatement(FrayParser.DoWhileStatementContext ctx) {
+        do {
+            visitBlock(ctx.block());
+        } while (conditionIsTrue(ctx.expression()));
+        return null;
+    }
+
+    @Override
     public FrayDatum visitExclusiveRangeExpression(FrayParser.ExclusiveRangeExpressionContext ctx) {
         try {
             final FraySet result = new FraySet(ctx, this);
@@ -256,6 +364,31 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
             errors.add(exc);
             return null;
         }
+    }
+
+    @Override
+    public FrayDatum visitExportDeclaration(FrayParser.ExportDeclarationContext ctx) {
+        try {
+            final Scope loaded = loadLibrary(ctx.source);
+            printDebug(ctx.source.getText());
+            printDebug("before export");
+
+            if (debug)
+                symbolTable.dumpSymbols();
+            importSymbols(loaded, symbolTable, ctx.importOf());
+
+            printDebug("after export");
+
+            if (debug)
+                symbolTable.dumpSymbols();
+        } catch (Exception exc) {
+            errors.add(new FrayException(
+                    String.format("Could not export source %s. %s", ctx.source.getText(), exc.getMessage()),
+                    ctx,
+                    this));
+        }
+
+        return null;
     }
 
     public FrayDatum visitExpression(FrayParser.ExpressionContext ctx) {
@@ -318,7 +451,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
 
     @Override
     public FrayDatum visitFunctionExpression(FrayParser.FunctionExpressionContext ctx) {
-        return compileFunctionBody(ctx.functionBody());
+        return compileFunctionBody(ctx.functionBody(), null);
     }
 
     @Override
@@ -357,39 +490,30 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     @Override
     public FrayDatum visitImportDeclaration(FrayParser.ImportDeclarationContext ctx) {
         try {
-            FrayAsset asset;
-            String source;
+            final Scope imported = loadLibrary(ctx.source);
+            final Scope exported = new Scope();
+            printDebug(String.format("Imported %s", ctx.source.getText()));
+            printDebug("All exported from library:");
 
-            if (ctx.source.string() != null) {
-                final String filename = source = ctx.source.string().getText().replaceAll(QUOTES, "");
-                printDebug(String.format("Now importing '%s'...", filename));
-                asset = FrayAsset.forFile(filename);
-            } else if (ctx.source.standardImport() != null) {
-                final String name = ctx.source.standardImport().source.getText();
-                source = ctx.source.standardImport().getText();
-                final String resourceName = String.format("inc/%s.fray", name);
-                printDebug(String.format("Now importing resource from stdlib: '%s'", resourceName));
-                final URL url = FrayInterpreter.class.getClassLoader().getResource(resourceName);
-                asset = FrayAsset.forUrl(url);
-            } else
-                throw new FrayException(String.format("Invalid source given for import: '%s'", ctx.getText()), ctx, this);
+            if (debug) imported.dumpSymbols();
 
-            final FrayAsset processed = pipeline.transform(asset);
-            final FrayLexer lexer = new FrayLexer(new ANTLRInputStream(processed.getInputStream()));
-            final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
-            final FrayParser parser = new FrayParser(tokenStream);
-            final FrayParser.CompilationUnitContext compilationUnitContext = parser.compilationUnit();
-            final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline);
-            interpreter.visitCompilationUnit(compilationUnitContext);
+            importSymbols(imported, exported, ctx.importOf());
+            printDebug("All ultimately imported:");
+
+            if (debug) exported.dumpSymbols();
 
             if (ctx.importAs() == null) {
-                symbolTable.load(interpreter.symbolTable);
+                printDebug(String.format("IMPORTED AS-IS %S:", ctx.importAs().alias.getText()));
+
+                if (debug)
+                    exported.dumpSymbols();
+                symbolTable.load(exported);
                 return super.visitImportDeclaration(ctx);
             } else {
                 final FrayDatum library = new FrayDatum(ctx, this) {
                     @Override
                     public String toString() {
-                        return String.format("[Library:%s]", source);
+                        return String.format("[Library:%s]", ctx.source.getText());
                     }
 
                     @Override
@@ -398,16 +522,26 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
                     }
                 };
 
-                library.getSymbolTable().load(interpreter.symbolTable);
+                printDebug(String.format("IMPORTED AS %S:", ctx.importAs().alias.getText()));
+
+                if (debug)
+                    exported.dumpSymbols();
+
+                library.getSymbolTable().load(exported);
                 symbolTable.setValue(ctx.importAs().alias.getText(), library, ctx, this, true);
 
                 return library;
             }
         } catch (Exception exc) {
             errors.add(new FrayException(
-                    String.format("Could not import source '%s'. %s", ctx.source.getText(), exc.getMessage()),
+                    String.format("Could not import source %s. %s", ctx.source.getText(), exc.toString()),
                     ctx,
                     this));
+
+            for (StackTraceElement element : exc.getStackTrace()) {
+                stack.push(new FrayStackElement(element.toString(), source.getSourcePath(), ctx));
+            }
+
             return null;
         }
     }
@@ -489,19 +623,61 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     }
 
     @Override
-    public FrayDatum visitNumericLiteralExpression(FrayParser.NumericLiteralExpressionContext ctx) {
-        if (ctx.INT() != null)
-            return new FrayNumber(ctx, this, Integer.parseInt(ctx.INT().getText()));
-        else if (ctx.DOUBLE() != null)
-            return new FrayNumber(ctx, this, Double.parseDouble(ctx.DOUBLE().getText()));
-        else if (ctx.HEX() != null)
-            return new FrayNumber(ctx, this, Integer.parseInt(ctx.HEX().getText().replaceAll("^0x", ""), 16));
-        return super.visitNumericLiteralExpression(ctx);
+    public FrayDatum visitNewExpression(FrayParser.NewExpressionContext ctx) {
+        try {
+            final FrayDatum resolved = visitExpression(ctx.type);
+
+            if (!(resolved instanceof FrayType)) {
+                throw new FrayException("Only types can be instantiated via 'new'.", ctx, this);
+            }
+
+            final List<FrayDatum> args = ctx.args.stream().map(this::visitExpression).collect(Collectors.toList());
+
+            // Todo: Sort out named constructors, I didn't think this through properly ;)
+            // Probably work out member expressions to return a child type for named constructors
+            return ((FrayType) resolved).construct("", ctx, args);
+
+        } catch (FrayException exc) {
+            errors.add(exc);
+        }
+
+        return null;
     }
 
-    public FrayDatum visitStatement(FrayParser.StatementContext ctx) {
+    @Override
+    public FrayDatum visitNumericLiteralExpression(FrayParser.NumericLiteralExpressionContext ctx) {
+        try {
+            if (ctx.INT() != null)
+                return new FrayNumber(ctx, this, df.parse(ctx.INT().getText(), new ParsePosition(0)).intValue());
+            else if (ctx.DOUBLE() != null)
+                return new FrayNumber(ctx, this, df.parse(ctx.DOUBLE().getText(), new ParsePosition(0)).doubleValue());
+            else if (ctx.HEX() != null)
+                return new FrayNumber(ctx, this, Integer.parseInt(ctx.HEX().getText().replaceAll("^0x", ""), 16));
+            return super.visitNumericLiteralExpression(ctx);
+        } catch (Exception exc) {
+            errors.add(new FrayException(String.format("Invalid numeric literal: '%s'", ctx.getText()), ctx, this));
+            return null;
+        }
+    }
+
+    @Override
+    public FrayDatum visitSetLiteralExpression(FrayParser.SetLiteralExpressionContext ctx) {
+        try {
+            final FraySet result = new FraySet(ctx, this);
+            result.getItems().addAll(ctx.expression().stream().map(this::visitExpression).collect(Collectors.toList()));
+            return result;
+        } catch (FrayException exc) {
+            errors.add(exc);
+            return null;
+        }
+    }
+
+    protected FrayDatum visitStatement(FrayParser.StatementContext ctx) {
         printDebug(String.format("Now visiting this %s: '%s'", ctx.getClass().getSimpleName(), ctx.getText()));
-        return ctx.accept(this);
+        stack.push(new FrayStackElement(ctx.getClass().getSimpleName().replaceAll("Context$", ""), source.getSourcePath(), ctx));
+        final FrayDatum result = ctx.accept(this);
+        stack.pop();
+        return result;
     }
 
     @Override
@@ -516,10 +692,18 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     }
 
     @Override
+    public FrayDatum visitTopLevelDefinition(FrayParser.TopLevelDefinitionContext ctx) {
+        stack.push(new FrayStackElement("top-level definition", source.getSourcePath(), ctx));
+        final FrayDatum result = super.visitTopLevelDefinition(ctx);
+        stack.pop();
+        return result;
+    }
+
+    @Override
     public FrayDatum visitTopLevelFunctionDefinition(FrayParser.TopLevelFunctionDefinitionContext ctx) {
         try {
             final String name = ctx.functionSignature().name.getText();
-            symbolTable.setValue(name, compileFunctionBody(ctx.functionBody()), ctx, this, true);
+            symbolTable.setValue(name, compileFunctionBody(ctx.functionBody(), name), ctx, this, true);
         } catch (FrayException exc) {
             errors.add(exc);
         }
@@ -567,6 +751,17 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
             }
         } catch (FrayException exc) {
             errors.add(exc);
+        }
+
+        return null;
+    }
+
+    @Override
+    public FrayDatum visitWhileStatement(FrayParser.WhileStatementContext ctx) {
+        while (conditionIsTrue(ctx.expression())) {
+            symbolTable.create();
+            visitBlock(ctx.block());
+            symbolTable.destroy();
         }
 
         return null;

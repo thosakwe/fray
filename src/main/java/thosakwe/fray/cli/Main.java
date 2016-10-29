@@ -59,6 +59,10 @@ public class Main {
         } catch (ParseException exc) {
             printUsage(options);
             System.exit(1);
+        } catch (FrayException exc) {
+            System.err.println(exc.toString());
+            exc.printStackTrace();
+            System.exit(1);
         } catch (Exception exc) {
             System.err.println(exc.getMessage());
             exc.printStackTrace();
@@ -86,7 +90,7 @@ public class Main {
     }
 
     private static void runRepl(FrayPipeline pipeline, CommandLine commandLine) throws FrayException {
-        final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline) {
+        final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline, null) {
             @Override
             public FrayDatum visitTopLevelStatement(FrayParser.TopLevelStatementContext ctx) {
                 return super.visitStatement(ctx.statement());
@@ -105,6 +109,7 @@ public class Main {
                 final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
                 final FrayParser parser = new FrayParser(tokenStream);
                 final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
+                interpreter.setSource(processed);
                 final FrayDatum result = interpreter.visitCompilationUnit(compilationUnit);
 
                 for (FrayException warning : interpreter.getWarnings()) {
@@ -113,7 +118,7 @@ public class Main {
                 }
 
                 for (FrayException error : interpreter.getErrors()) {
-                    System.err.printf("Warning: %s%n", error.getMessage());
+                    System.err.println(error.toString());
                     error.printStackTrace();
                 }
 
@@ -140,7 +145,7 @@ public class Main {
             final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
             final FrayParser parser = new FrayParser(tokenStream);
             final FrayParser.CompilationUnitContext compilationUnitContext = parser.compilationUnit();
-            final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline);
+            final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline, processed);
             interpreter.visitCompilationUnit(compilationUnitContext);
 
             final FrayDatum mainFunction = interpreter.getSymbolTable().getValue("main");
@@ -158,7 +163,7 @@ public class Main {
                 }
 
                 for (FrayException error : interpreter.getErrors()) {
-                    System.err.printf("Warning: %s%n", error.getMessage());
+                    System.err.println(error.toString());
                     error.printStackTrace();
                 }
 

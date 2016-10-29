@@ -9,7 +9,7 @@ import thosakwe.fray.lang.errors.FrayException;
 
 import java.util.List;
 
-public class PrintShim implements Shim {
+public class PrintShim implements FrayShim {
     @Override
     public void inject(FrayInterpreter interpreter) throws FrayException {
         interpreter.getSymbolTable().setValue("print", new FrayFunction(null, interpreter) {

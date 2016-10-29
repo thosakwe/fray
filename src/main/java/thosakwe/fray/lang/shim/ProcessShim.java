@@ -8,7 +8,7 @@ import thosakwe.fray.lang.errors.FrayException;
 
 import java.util.List;
 
-public class ProcessShim implements Shim {
+public class ProcessShim implements FrayShim {
     @Override
     public void inject(FrayInterpreter interpreter) throws FrayException {
         interpreter.getSymbolTable().setValue("process", process(interpreter), null, interpreter, true);

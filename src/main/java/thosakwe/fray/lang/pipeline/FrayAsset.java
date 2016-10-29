@@ -22,7 +22,7 @@ public class FrayAsset {
     public static FrayAsset forFile(File file) throws FileNotFoundException {
         return new FrayAsset(
                 FilenameUtils.getExtension(file.getPath()),
-                file.getPath(),
+                file.getAbsolutePath(),
                 file.getName(),
                 new FileInputStream(file)
         );

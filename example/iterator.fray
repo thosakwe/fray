@@ -1,0 +1,7 @@
+fn main() {
+    final it = [1 .. 10].iterator;
+
+    while(it.moveNext()) {
+        print(it.current);
+    }
+}

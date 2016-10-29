@@ -5,6 +5,7 @@ import thosakwe.fray.lang.data.FrayDatum;
 import thosakwe.fray.lang.errors.FrayException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,7 +15,7 @@ public class Scope {
     private Scope parent = null;
     private FrayDatum thisContext = null;
 
-    private Scope getInnerMostScope() {
+    public Scope getInnerMostScope() {
         Scope innermost = this;
 
         while (innermost.child != null)
@@ -155,5 +156,47 @@ public class Scope {
 
     public void createNew(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter) throws FrayException {
         createNew(name, value, source, interpreter, false);
+    }
+
+    public FrayDatum getThisContext() {
+        Scope currentScope = getInnerMostScope();
+
+        while (currentScope != null) {
+            if (currentScope.thisContext != null)
+                return currentScope.thisContext;
+
+            currentScope = currentScope.parent;
+        }
+
+        return null;
+    }
+
+    public void setThisContext(FrayDatum thisContext) {
+        this.thisContext = thisContext;
+    }
+
+    public List<Symbol> allUnique(boolean importPrivate) {
+        final List<Symbol> result = new ArrayList<>();
+        final List<String> added = new ArrayList<>();
+        Scope currentScope = getInnerMostScope();
+
+        while (currentScope != null) {
+            for (Symbol symbol : currentScope.symbols) {
+                if (!added.contains(symbol.getName())) {
+                    if (!symbol.getName().startsWith("_") || importPrivate) {
+                        added.add(symbol.getName());
+                        result.add(symbol);
+                    }
+                }
+            }
+
+            currentScope = currentScope.parent;
+        }
+
+        return result;
+    }
+
+    public List<Symbol> allUnique() {
+        return allUnique(false);
     }
 }

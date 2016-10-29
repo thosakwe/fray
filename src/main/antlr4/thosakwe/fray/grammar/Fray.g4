@@ -1,6 +1,7 @@
 // Todo: continue, break
 grammar Fray;
 
+SHEBANG: '#!' ~('\n')* -> channel(SHEBANG);
 SL_CMT: ('#' | '//') ~('\n')* -> channel(HIDDEN);
 WS: (' ' | '\n' | '\r' | '\r\n') -> skip;
 
@@ -36,6 +37,7 @@ CLASS: 'class';
 CONSTRUCTOR: 'constructor';
 DO: 'do';
 ELSE: 'else';
+EXPORT: 'export';
 EXTENDS: 'extends';
 FIELD: 'field';
 FINAL: 'final';
@@ -73,15 +75,12 @@ STRING: '\'' (ESCAPED | ~('\n'|'\r'|'\''))*? '\'';
 // Identifier - always last
 IDENTIFIER: [A-Za-z_] [A-Za-z0-9_]*;
 
-// Miscellaneous
-SHEBANG: '#!' (~('\n') | EOF)*;
+compilationUnit: topLevelDefinition*;
 
-compilationUnit: shebang? topLevelDefinition*;
-
-shebang: SHEBANG;
 topLevelDefinition:
     emptyDeclaration
     | importDeclaration
+    | exportDeclaration
     | topLevelFunctionDefinition
     | topLevelVariableDeclaration
     | classDefinition
@@ -93,6 +92,7 @@ importOf: SQUARE_L ((names+=IDENTIFIER COMMA)* names+=IDENTIFIER COMMA?)? SQUARE
 importSource: standardImport | string;
 standardImport: LT source=IDENTIFIER GT;
 importAs: AS alias=IDENTIFIER;
+exportDeclaration: EXPORT importOf? source=importSource;
 
 topLevelFunctionDefinition: functionSignature functionBody SEMI?;
 topLevelVariableDeclaration: annotations=annotation* (FINAL | LET) (variableDeclaration COMMA)* variableDeclaration SEMI?;
