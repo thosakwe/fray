@@ -25,6 +25,7 @@ The interpreter willy include:
   - Strings
     - Raw
     - String Interpolation
+        - This can simply be a transformer.
 
 
 *All* additional functionality can hopefully be
