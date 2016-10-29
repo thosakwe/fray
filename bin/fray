@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#!/usr/bin/env bash
+DP0=`dirname $0`
+java -cp "$DP0/target/fray-1.0-SNAPSHOT.jar" thosakwe.fray.cli.Main $@

@@ -1,6 +1,7 @@
 package thosakwe.fray.lang.pipeline;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.net.URL;
@@ -23,7 +24,7 @@ public class FrayAsset {
         return new FrayAsset(
                 FilenameUtils.getExtension(file.getPath()),
                 file.getAbsolutePath(),
-                file.getName(),
+                FilenameUtils.getBaseName(file.getPath()),
                 new FileInputStream(file)
         );
     }
@@ -45,8 +46,15 @@ public class FrayAsset {
         return new FrayAsset(newExtension, sourcePath, name, inputStream);
     }
 
-    public FrayAsset changeInputStream(InputStream newStream) {
+    public FrayAsset changeInputStream(InputStream newStream) throws IOException {
         return new FrayAsset(extension, sourcePath, name, newStream);
+    }
+
+    public FrayAsset changeText(String newText, boolean trim) throws IOException {
+        return changeInputStream(new ByteArrayInputStream((trim ? newText.trim() : newText).getBytes()));
+    }
+    public FrayAsset changeText(String newText) throws IOException {
+        return changeText(newText, true);
     }
 
     public FrayAsset changeName(String newName) {
@@ -71,6 +79,10 @@ public class FrayAsset {
 
     public String getSourcePath() {
         return sourcePath;
+    }
+
+    public String readAsString() throws IOException {
+        return IOUtils.toString(inputStream);
     }
 
     FrayAsset setPipeline(FrayPipeline pipeline) {

@@ -1,3 +1,3 @@
-import <func> as F;
+import <func> as F
 
-fn main() => print(F.sum([1..4]));
+fn main() => print(F.src([1..4]).sum());

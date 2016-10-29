@@ -1,0 +1,10 @@
+fn main() {
+    // Fray supports string interpolation.
+    // String interpolation is handled not by the interpreter,
+    // but by an internal code transformer. Cool, huh? ;)
+
+    final two = 2;
+
+    print('1 + 1 = %two');
+    print('%two + 1 = %{two + 1}');
+}

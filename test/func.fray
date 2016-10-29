@@ -2,7 +2,7 @@ import <assert> as assert;
 import <func> as F;
 
 fn main() {
-    final sum = F.sum([1..3]);
+    final sum = F.src([1..3]).sum();
     print(sum);
     print('Sum: %sum');
     assert.equal(sum, 6);

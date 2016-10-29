@@ -24,8 +24,10 @@ The interpreter willy include:
       - Boolean: !=, <, <=, >, >=
   - Strings
     - Raw
-    - String Interpolation
-        - This can simply be a transformer.
+    - Escaping
+- Imported and exported need to use separate symbol tables...
+    - Also, it's not properly exporting top-level variables :(
+- Hoist functions
 
 
 *All* additional functionality can hopefully be
@@ -56,6 +58,11 @@ implemented in Fray, in the form of libraries.
 3. Mark symbols as `used` only if they are actually used.
 4. Recurse through symbols, and for any that are not used, remove their
 declarations. :)
+5. Suggestions
+    - Defined/updated (count updates) but not accessed
+    - final definitions of null are redundant
+    - Dict/Set never queried
+6. Safe delete :)
 
 ## Static Analysis
 

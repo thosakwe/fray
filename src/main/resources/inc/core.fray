@@ -1,0 +1,12 @@
+final external = '[shimmed at compile time]';
+
+@external
+class Exception {
+    let message, stack;
+
+    constructor(msg) {}
+}
+
+@external fn print(msg) {}
+
+@external final process;

@@ -1,0 +1,39 @@
+// The prime factors of 13195 are 5, 7, 13 and 29.
+// What is the largest prime factor of the number 600851475143?
+// For our sake, we'll just run up to 32. :)
+
+fn isPrime(n) {
+    if (n <= 1)
+        ret false;
+    else if (n <= 3)
+        ret true;
+    else if ((n % 2 == 0) || (n % 3 == 0))
+        ret false;
+    let i = 5;
+
+    while ((i ^ 2) <= n) {
+        if ((n % i == 0) || (n % (i + 2) == 0))
+            ret false;
+        i += 6;
+    }
+
+    ret true;
+}
+
+fn main() {
+    final n = 32;
+    let largest = 0;
+
+    for (i : [1 .. n]) {
+        print('Checking prime: %i...');
+
+        if (isPrime(i)) {
+            print('%i IS PRIME!!!');
+            if (i > largest) {
+                largest = i;
+            }
+        }
+    }
+
+    print('The largest prime factor of %n is %largest. Tally ho!');
+}

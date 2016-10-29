@@ -71,7 +71,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <mainClass>thosakwe.fray.cli.Main</mainClass>
-                            <classpathPrefix>inc/</classpathPrefix>
+                            <classpathPrefix>lib/</classpathPrefix>
                         </manifest>
                     </archive>
                 </configuration>

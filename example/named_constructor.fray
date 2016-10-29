@@ -1,0 +1,19 @@
+class Greeting {
+    let message;
+
+    constructor(message) {
+        this.message = message;
+    }
+
+    constructor hello() {
+        this.message = 'Hello, world!';
+    }
+
+    fn greet() => print(this.message);
+}
+
+fn main() {
+    final foo = new Greeting('Happy holidays!'), hello = new Greeting.hello();
+    foo.greet();
+    hello.greet();
+}

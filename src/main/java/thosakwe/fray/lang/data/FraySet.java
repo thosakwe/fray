@@ -14,7 +14,26 @@ public class FraySet extends FrayDatum {
     public FraySet(ParseTree source, FrayInterpreter interpreter) throws FrayException {
         super(source, interpreter);
         iterator = new FrayIterator(source, interpreter, this);
+
         getSymbolTable().setValue("iterator", iterator, source, interpreter, true);
+
+        getSymbolTable().setValue("reverse", new FrayFunction(source, interpreter) {
+            @Override
+            public FrayDatum call(FrayInterpreter interpreter, ParseTree source, List<FrayDatum> args) throws FrayException {
+                final FraySet set = new FraySet(source, interpreter);
+
+                for (int i = items.size() - 1; i >= 0; i--) {
+                    set.items.add(items.get(i));
+                }
+
+                return set;
+            }
+
+            @Override
+            public String toString() {
+                return "[Set.reverse()]";
+            }
+        }, source, interpreter, true);
     }
 
     @Override

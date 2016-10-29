@@ -1,9 +1,19 @@
-fn sum(set) {
-    let s = 0;
+class FunctionalWrapper {
+    let source;
 
-    for (i : set) {
-        s += i;
+    constructor(source) {
+        this.source = source;
     }
 
-    ret s;
+    fn sum() {
+        let s = 0;
+
+        for (i : this.source) {
+            s += i;
+        }
+
+        ret s;
+    }
 }
+
+fn src(x) => new FunctionalWrapper(x);

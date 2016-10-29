@@ -1,5 +1,16 @@
 class Foo {
     let a, b, c = 3;
 
-    fn bar() => 'baz';
+    fn bar() => 'world';
+
+    fn greet() => print('Hello, %{this.bar()}!');
+}
+
+fn main() {
+    final foo = new Foo();
+
+    print('a: %{foo.a}, b: %{foo.b}, c: %{foo.c}');
+    print(Foo);
+    print(foo);
+    foo.greet();
 }

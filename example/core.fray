@@ -1,0 +1,11 @@
+// The <core> library is automatically imported
+// into every Fray program. Importing it does nothing.
+// This is because all of <core>'s members are marked as
+// @external.
+//
+// Any top-level definition marked with @external is removed at
+// compile-time,under the expectation that the compiler/interpreter
+// will be able to polyfill it.
+
+import <core>
+export 'hello';

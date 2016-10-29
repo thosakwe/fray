@@ -1,0 +1,5 @@
+fn main() {
+    for (final i : [1..2500].reverse()) {
+        print(i);
+    }
+}

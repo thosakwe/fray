@@ -4,6 +4,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.lang.FrayInterpreter;
 import thosakwe.fray.lang.Scope;
+import thosakwe.fray.lang.Symbol;
 import thosakwe.fray.lang.errors.FrayException;
 
 import java.util.ArrayList;
@@ -35,6 +36,11 @@ public class FrayDatum {
         else return callee.call(interpreter, source, args);
     }
 
+    public String curses() {
+        // Todo: Fancy curses
+        return toString();
+    }
+
     public FrayDatum divide(ParseTree source, FrayDatum right) throws FrayException {
         return maybeArithmeticOperator("/", source, right);
     }
@@ -64,7 +70,7 @@ public class FrayDatum {
     }
 
     public FrayBoolean gequ(ParseTree source, FrayDatum right) throws FrayException {
-        return maybeBooleanOperator(">=", source, right);
+        return (gt(source, right).getValue() || equ(source, right).getValue()) ? FrayBoolean.TRUE : FrayBoolean.FALSE;
     }
 
     public ParseTree getSource() {
@@ -109,7 +115,7 @@ public class FrayDatum {
     }
 
     public FrayBoolean lequ(ParseTree source, FrayDatum right) throws FrayException {
-        return maybeBooleanOperator("<=", source, right);
+        return (lt(source, right).getValue() || equ(source, right).getValue()) ? FrayBoolean.TRUE : FrayBoolean.FALSE;
     }
 
     private FrayDatum maybeArithmeticOperator(String op, ParseTree source, FrayDatum right) throws FrayException {
@@ -140,7 +146,7 @@ public class FrayDatum {
     }
 
     public FrayBoolean nequ(ParseTree source, FrayDatum right) throws FrayException {
-        return maybeBooleanOperator("!=", source, right);
+        return (!equ(source, right).getValue()) ? FrayBoolean.TRUE : FrayBoolean.FALSE;
     }
 
     public FrayBoolean or(ParseTree source, FrayDatum right) throws FrayException {
@@ -161,10 +167,34 @@ public class FrayDatum {
 
     @Override
     public String toString() {
-        return String.format("[Instance of %s]", getClass().getName());
+        final Symbol symStr = symbolTable.getSymbol("str");
+
+        if (symStr == null)
+            return String.format("[Instance of %s]", getClass().getName());
+        else {
+            try {
+                final FrayDatum str = symStr.getValue();
+
+                if (!(str instanceof FrayFunction))
+                    throw new FrayException("Custom stringifier must be a function.", str.source, interpreter);
+
+                final FrayDatum result = str.call(interpreter, str.source, new ArrayList<>());
+
+                if (!(result instanceof FrayString))
+                    throw new FrayException("Custom stringifier must return a string.", str.source, interpreter);
+
+                return result.toString();
+            } catch (FrayException exc) {
+                return "";
+            }
+        }
     }
 
-    public String curses() {
-        return toString();
+    public void setField(ParseTree source, Symbol symbol, FrayDatum right) throws FrayException {
+        if (symbol.isFinal())
+            throw new FrayException(String.format("Attempt to re-assign final member '%s'", symbol.getName()),
+                    source,
+                    interpreter);
+        symbol.setValue(right);
     }
 }

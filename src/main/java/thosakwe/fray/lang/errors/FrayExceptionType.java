@@ -10,7 +10,7 @@ import java.util.List;
 
 public class FrayExceptionType extends FrayType {
     public FrayExceptionType(FrayInterpreter interpreter) {
-        super(null, interpreter);
+        super(null, interpreter, null);
     }
 
     @Override

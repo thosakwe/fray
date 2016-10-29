@@ -89,7 +89,7 @@ topLevelDefinition:
 emptyDeclaration: SEMI;
 importDeclaration: annotations=annotation* IMPORT importOf? source=importSource importAs? SEMI?;
 importOf: SQUARE_L ((names+=IDENTIFIER COMMA)* names+=IDENTIFIER COMMA?)? SQUARE_R OF;
-importSource: standardImport | string;
+importSource: standardImport | expression;
 standardImport: LT source=IDENTIFIER GT;
 importAs: AS alias=IDENTIFIER;
 exportDeclaration: EXPORT importOf? source=importSource;
@@ -143,9 +143,9 @@ expression:
     | NULL #NullLiteralExpression
     | THIS #ThisExpression
     | SUPER DOT member=IDENTIFIER #SuperExpression
+    | NEW type=expression PAREN_L ((args+=expression COMMA)* args+=expression)? COMMA? PAREN_R #NewExpression
     | expression DOT IDENTIFIER #MemberExpression
     | left=expression assignmentOperator right=expression #AssignmentExpression
-    | NEW type=expression PAREN_L ((args+=expression COMMA)* args+=expression)? COMMA? PAREN_R #NewExpression
     | left=expression binaryOperator right=expression #BinaryExpression
     | unaryOperator expression #UnaryPrefixExpression
     | expression unaryOperator #UnaryPostfixExpression

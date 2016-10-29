@@ -18,7 +18,7 @@ public class Symbol {
         this.value = value;
     }
 
-    String getName() {
+    public String getName() {
         return name;
     }
 

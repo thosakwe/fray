@@ -8,6 +8,8 @@ import java.util.List;
 
 public class FrayPipeline {
     public static final FrayPipeline DEFAULT = new FrayPipeline(new FrayTransformer[]{
+            new RemoveExternalTransformer(),
+            new StringInterpolatorTransformer(),
             new AssignmentTransformer()
     });
     public static final String STDIN = "[stdin]";
@@ -15,7 +17,8 @@ public class FrayPipeline {
     private boolean debug = false;
     private final List<FrayTransformer> transformers = new ArrayList<>();
 
-    public FrayPipeline() {}
+    public FrayPipeline() {
+    }
 
     public FrayPipeline(FrayTransformer[] transformers) {
         Collections.addAll(this.transformers, transformers);
@@ -23,6 +26,13 @@ public class FrayPipeline {
 
     public FrayPipeline(Collection<FrayTransformer> transformers) {
         this.transformers.addAll(transformers);
+    }
+
+    public FrayPipeline chain(FrayPipeline other) {
+        final FrayPipeline pipeline = new FrayPipeline();
+        pipeline.transformers.addAll(transformers);
+        pipeline.transformers.addAll(other.transformers);
+        return pipeline;
     }
 
     public boolean isDebug() {
@@ -42,14 +52,40 @@ public class FrayPipeline {
         this.debug = debug;
     }
 
-    public FrayAsset transform(FrayAsset asset) throws IOException {
-        FrayAsset result = asset.setPipeline(this);
+    public FrayAsset transform(FrayAsset input) throws IOException {
+        FrayAsset output = input.setPipeline(this);
 
-        for (FrayTransformer transformer : transformers) {
-            if (transformer.claim(result))
-                result = transformer.transform(asset).setPipeline(this);
+        if (debug) {
+            final String src = output.readAsString();
+            printDebug(String.format("Original source before running any transformers: \n'%s'", src));
+            output = input.changeText(src).setPipeline(this);
         }
 
-        return result;
+        for (FrayTransformer transformer : transformers) {
+            if (transformer.claim(output)) {
+                if (debug) {
+                    printDebug(String.format("Now running %s transformer on asset '%s'...", transformer.getName(), output.getName()));
+                    final String src = output.readAsString();
+                    printDebug(String.format("Source before running %s transformer: \n'%s'", transformer.getName(), src));
+                    output = input.changeText(src).setPipeline(this);
+                }
+
+                output = transformer.transform(output).setPipeline(this);
+
+                if (debug) {
+                    final String src = output.readAsString();
+                    printDebug(String.format("Source after running %s transformer: \n'%s'", transformer.getName(), src));
+                    output = input.changeText(src).setPipeline(this);
+                }
+            }
+        }
+
+        if (debug) {
+            final String src = output.readAsString();
+            printDebug(String.format("Final source after running all transformers: \n'%s'", src));
+            output = input.changeText(src).setPipeline(this);
+        }
+
+        return output;
     }
 }
