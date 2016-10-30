@@ -1,6 +1,27 @@
 # fray
+Interpreter/compiler with an emphasis on code transformation and reflection.
 
-The interpreter willy include:
+# Compile to (eventually)
+The interpreter is nice and all, but it's slow. With tree-shaking, we can
+(eventually) compile to optimal bundles in other languages.
+
+- JavaScript (ES5)
+    - I considered ES6, but:
+        - Still not really supported anywhere...
+        - Dart has every ES6 feature, done way better
+        - ES5 is compatible with pretty much everything now
+- Dart
+    - It's fast
+    - I like Dart
+    - Several Fray features inspired by Dart, as well as the idea of an
+    asset pipeline
+    
+- C (this is a big **IF**)
+    - It would be challenging to compile to C, however:
+        - C is supported by everything
+        - Many highly-optimized compilers available
+
+The interpreter will include:
 - Control flow
     - break
     - continue
