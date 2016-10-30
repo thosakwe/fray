@@ -1,0 +1,13 @@
+name: fray
+description: Interpreter/compiler with an emphasis on code transformation and reflection.
+version: 1.0.0-dev
+author: Tobe O <thosakwe@gmail.com>
+homepage: https://github.com/fray-lang/fray
+environment:
+  sdk: ">=1.8.0"
+dependencies:
+  antlr4dart: ^0.7.0
+  args: ^0.13.6
+  nero: ^1.0.0-dev
+dev_dependencies:
+  test: ^0.12.15
