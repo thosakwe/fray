@@ -7,6 +7,6 @@ import thosakwe.fray.lang.errors.FrayExceptionType;
 public class ExceptionShim implements FrayShim {
     @Override
     public void inject(FrayInterpreter interpreter) throws FrayException {
-        interpreter.getSymbolTable().setValue("Exception", new FrayExceptionType(interpreter), null, interpreter, true);
+        interpreter.getSymbolTable().setFinal("Exception", new FrayExceptionType(interpreter), null, interpreter);
     }
 }

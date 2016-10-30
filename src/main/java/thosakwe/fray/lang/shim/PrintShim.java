@@ -12,7 +12,7 @@ import java.util.List;
 public class PrintShim implements FrayShim {
     @Override
     public void inject(FrayInterpreter interpreter) throws FrayException {
-        interpreter.getSymbolTable().setValue("print", new FrayFunction(null, interpreter) {
+        interpreter.getSymbolTable().setFinal("print", new FrayFunction(null, interpreter) {
             @Override
             public FrayDatum call(FrayInterpreter interpreter, ParseTree source, List<FrayDatum> args) throws FrayException {
                 if (args.size() != 1)
@@ -25,6 +25,6 @@ public class PrintShim implements FrayShim {
             public String toString() {
                 return "[print]";
             }
-        }, null, interpreter, true);
+        }, null, interpreter);
     }
 }

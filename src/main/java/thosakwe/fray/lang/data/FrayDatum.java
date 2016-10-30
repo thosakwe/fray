@@ -161,6 +161,14 @@ public class FrayDatum {
         return maybeArithmeticOperator("^", source, right);
     }
 
+    public Symbol registerFinalMember(String name, FrayDatum value) throws FrayException {
+        return symbolTable.setFinal(name, value, source, interpreter);
+    }
+
+    public Symbol registerMutableMember(String name, FrayDatum value) throws FrayException {
+        return symbolTable.setValue(name, value, source, interpreter, false);
+    }
+
     public FrayDatum times(ParseTree source, FrayDatum right) throws FrayException {
         return maybeArithmeticOperator("*", source, right);
     }

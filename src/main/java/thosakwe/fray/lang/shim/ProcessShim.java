@@ -11,7 +11,7 @@ import java.util.List;
 public class ProcessShim implements FrayShim {
     @Override
     public void inject(FrayInterpreter interpreter) throws FrayException {
-        interpreter.getSymbolTable().setValue("process", process(interpreter), null, interpreter, true);
+        interpreter.getSymbolTable().setFinal("process", process(interpreter), null, interpreter);
     }
 
     private FrayDatum process(FrayInterpreter interpreter) throws FrayException {
@@ -22,7 +22,7 @@ public class ProcessShim implements FrayShim {
             }
         };
 
-        process.getSymbolTable().setValue("exit", new FrayFunction(null, interpreter) {
+        process.registerFinalMember("exit", new FrayFunction(null, interpreter) {
             @Override
             public FrayDatum call(FrayInterpreter interpreter, ParseTree source, List<FrayDatum> args) throws FrayException {
                 int status = 0;
@@ -42,9 +42,9 @@ public class ProcessShim implements FrayShim {
             public String toString() {
                 return "[Process.exit(code?)]";
             }
-        }, null, interpreter);
+        });
 
-        process.getSymbolTable().setValue("version", new FrayString(null, interpreter, Fray.VERSION), null, interpreter, true);
+        process.getSymbolTable().setFinal("version", new FrayString(null, interpreter, Fray.VERSION), null, interpreter);
 
         return process;
     }

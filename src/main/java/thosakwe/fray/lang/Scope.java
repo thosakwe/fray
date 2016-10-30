@@ -2,6 +2,7 @@ package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.lang.data.FrayDatum;
+import thosakwe.fray.lang.data.FrayLibrary;
 import thosakwe.fray.lang.errors.FrayException;
 
 import java.util.ArrayList;
@@ -106,20 +107,28 @@ public class Scope {
         load(other, false);
     }
 
-    public void setValue(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter, boolean isFinal) throws FrayException {
+    public Symbol setFinal(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter) throws FrayException {
+        return setValue(name, value, source, interpreter, true);
+    }
+
+    public Symbol setValue(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter, boolean isFinal) throws FrayException {
         final Symbol resolved = getSymbol(name);
 
         if (resolved == null) {
-            getInnerMostScope().symbols.add(new Symbol(name, value, isFinal));
-        } else if (!resolved.isFinal())
+            final Symbol symbol = new Symbol(name, value, isFinal);
+            getInnerMostScope().symbols.add(symbol);
+            return symbol;
+        } else if (!resolved.isFinal()) {
             resolved.setValue(value);
+            return resolved;
+        }
         else
             throw new FrayException(String.format("Cannot overwrite final variable '%s'.", resolved.getName()), source, interpreter);
 
     }
 
-    public void setValue(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter) throws FrayException {
-        setValue(name, value, source, interpreter, false);
+    public Symbol setValue(String name, FrayDatum value, ParseTree source, FrayInterpreter interpreter) throws FrayException {
+        return setValue(name, value, source, interpreter, false);
     }
 
     public List<Symbol> getSymbols() {
@@ -198,5 +207,13 @@ public class Scope {
 
     public List<Symbol> allUnique() {
         return allUnique(false);
+    }
+
+    public void load(FrayLibrary from, boolean importPrivate) {
+        getInnerMostScope().symbols.addAll((importPrivate ? from.getExportedSymbols() : from.getPublicSymbols()));
+    }
+
+    public void load(FrayLibrary from) {
+        load(from, false);
     }
 }

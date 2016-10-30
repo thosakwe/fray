@@ -15,9 +15,8 @@ public class FraySet extends FrayDatum {
         super(source, interpreter);
         iterator = new FrayIterator(source, interpreter, this);
 
-        getSymbolTable().setValue("iterator", iterator, source, interpreter, true);
-
-        getSymbolTable().setValue("reverse", new FrayFunction(source, interpreter) {
+        registerFinalMember("iterator", iterator);
+        registerFinalMember("reverse", new FrayFunction(source, interpreter) {
             @Override
             public FrayDatum call(FrayInterpreter interpreter, ParseTree source, List<FrayDatum> args) throws FrayException {
                 final FraySet set = new FraySet(source, interpreter);
@@ -33,7 +32,7 @@ public class FraySet extends FrayDatum {
             public String toString() {
                 return "[Set.reverse()]";
             }
-        }, source, interpreter, true);
+        });
     }
 
     @Override

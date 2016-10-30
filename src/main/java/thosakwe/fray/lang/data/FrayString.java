@@ -7,15 +7,11 @@ import thosakwe.fray.lang.errors.FrayException;
 public class FrayString extends FrayDatum {
     private final String value;
 
-    public FrayString(ParseTree source, FrayInterpreter interpreter, String value) {
+    public FrayString(ParseTree source, FrayInterpreter interpreter, String value) throws FrayException {
         super(source, interpreter);
         this.value = value;
 
-        try {
-            getSymbolTable().setValue("length", new FrayNumber(source, interpreter, value.length()), source, interpreter);
-        } catch (FrayException exc) {
-            interpreter.getErrors().add(exc);
-        }
+        registerFinalMember("length", new FrayNumber(source, interpreter, value.length()));
     }
 
     @Override

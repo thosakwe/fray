@@ -118,25 +118,26 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
         return warnings;
     }
 
-    private void importSymbols(Scope from, Scope to, FrayParser.ImportOfContext ofContext) throws FrayException {
+    private void importSymbols(FrayLibrary library, Scope targetScope, FrayParser.ImportOfContext ofContext) throws FrayException {
         if (ofContext == null) {
-            to.load(from);
+            targetScope.load(library);
         } else {
+            final List<Symbol> exported = library.getPublicSymbols();
+
             for (TerminalNode id : ofContext.IDENTIFIER()) {
                 final String name = id.getText();
-                final Symbol symbol = from.getSymbol(name);
+                Symbol resolved = null;
 
-                if (symbol == null) {
-                    printDebug(String.format("Hmm, library doesn't contain '%s'.", name));
-                    printDebug("However, it does contain:");
+                for (Symbol symbol : exported) {
+                    if (symbol.getName().equals(name))
+                        resolved = symbol;
+                }
 
-                    if (debug)
-                        from.dumpSymbols();
-
+                if (resolved == null) {
                     throw new FrayException(String.format("Library does not export a member called '%s'.", name), id, this);
                 }
 
-                to.getSymbols().add(symbol);
+                targetScope.getSymbols().add(resolved);
             }
         }
     }
@@ -145,7 +146,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
         return debug;
     }
 
-    private Scope loadLibrary(FrayParser.ImportSourceContext ctx) throws IOException, FrayException {
+    private FrayLibrary loadLibrary(FrayParser.ImportSourceContext ctx) throws IOException, FrayException {
         FrayAsset asset;
 
         if (ctx.expression() != null) {
@@ -168,8 +169,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
         final FrayParser parser = new FrayParser(tokenStream);
         final FrayParser.CompilationUnitContext compilationUnitContext = parser.compilationUnit();
         final FrayInterpreter interpreter = new FrayInterpreter(commandLine, pipeline, processed);
-        interpreter.visitCompilationUnit(compilationUnitContext);
-        return interpreter.symbolTable;
+        return interpreter.visitCompilationUnit(compilationUnitContext);
     }
 
     public void printDebug(String message) {
@@ -392,24 +392,24 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
                         instance.getSymbolTable().setValue(methodName, function, def, getInterpreter(), true);
 
                         // Custom operators
-                        for (FrayParser.AnnotationContext annotation : def.functionSignature().annotation()) {
-                            if (annotation.expression() instanceof FrayParser.InvocationExpressionContext) {
-                                final FrayParser.InvocationExpressionContext invocation = (FrayParser.InvocationExpressionContext) annotation.expression();
+                        def.functionSignature().annotation().stream()
+                                .filter(annotation -> annotation.expression() instanceof FrayParser.InvocationExpressionContext)
+                                .forEach(annotation -> {
+                                    final FrayParser.InvocationExpressionContext invocation = (FrayParser.InvocationExpressionContext) annotation.expression();
 
-                                if (invocation.callee instanceof FrayParser.IdentifierExpressionContext) {
-                                    final String id = invocation.callee.getText();
+                                    if (invocation.callee instanceof FrayParser.IdentifierExpressionContext) {
+                                        final String id = invocation.callee.getText();
 
-                                    if (id.equals("operator") && invocation.args.size() == 1) {
-                                        final FrayDatum arg = visitExpression(invocation.args.get(0));
+                                        if (id.equals("operator") && invocation.args.size() == 1) {
+                                            final FrayDatum arg = visitExpression(invocation.args.get(0));
 
-                                        if (arg instanceof FrayString) {
-                                            instance.getOperators().put(arg.toString(), function);
-                                            printDebug(String.format("Registered custom operator: %s => %s", arg, function));
+                                            if (arg instanceof FrayString) {
+                                                instance.getOperators().put(arg.toString(), function);
+                                                printDebug(String.format("Registered custom operator: %s => %s", arg, function));
+                                            }
                                         }
                                     }
-                                }
-                            }
-                        }
+                                });
 
                         getInterpreter().getSymbolTable().getInnerMostScope().setThisContext(instance);
                         getInterpreter().getSymbolTable().destroy();
@@ -432,7 +432,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
 
                 // Add subtype
                 if (!constructorName.isEmpty()) {
-                    type.getSymbolTable().setValue(constructorName, new FrayType(def, this, parentType) {
+                    type.registerFinalMember(constructorName, new FrayType(def, this, parentType) {
                         @Override
                         public String getName() {
                             return String.format("[Factory:%s.%s]", name, constructorName);
@@ -442,22 +442,17 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
                         public FrayDatum construct(String _constructorName, ParseTree source, List<FrayDatum> args) throws FrayException {
                             return type.construct(constructorName, source, args);
                         }
-                    }, def, this);
+                    });
                 }
             }
 
             printDebug(String.format("Registering type '%s': %s", name, type));
-            symbolTable.setValue(name, type, ctx, this, true);
+            symbolTable.setFinal(name, type, ctx, this);
 
             printDebug("All constructors:");
 
-            type.getConstructors().
-
-                    forEach((k, v) ->
-
-                    {
-                        printDebug(String.format("'%s': %s", k, v));
-                    });
+            type.getConstructors().forEach((k, v) -> printDebug(String.format("'%s': %s", k, v)));
+            return type;
         } catch (FrayException exc) {
             errors.add(exc);
         }
@@ -466,19 +461,58 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     }
 
     @Override
-    public FrayDatum visitCompilationUnit(FrayParser.CompilationUnitContext ctx) {
-        FrayDatum result = null;
+    public FrayLibrary visitCompilationUnit(FrayParser.CompilationUnitContext ctx) {
+        FrayLibrary result = new FrayLibrary(ctx, this, source);
 
         for (FrayParser.TopLevelDefinitionContext def : ctx.topLevelDefinition()) {
             if (def.topLevelStatement() != null) {
                 if (def.topLevelStatement().statement() instanceof FrayParser.ExpressionStatementContext) {
-                    result = visitExpression(((FrayParser.ExpressionStatementContext) def.topLevelStatement().statement()).expression());
+                    if (ctx.topLevelDefinition().size() == 1) {
+                        // If we are in the REPL, then we'll just set the default export
+                        // to the value of the first expression statement.
+                        final FrayDatum defaultExport = visitExpression(((FrayParser.ExpressionStatementContext) def.topLevelStatement().statement()).expression());
+                        result.setDefaultExport(defaultExport);
+                    }
+                }
+            } else if (def.classDefinition() != null) {
+                final FrayType type = (FrayType) visitClassDefinition(def.classDefinition());
+
+                if (type != null) {
+                    final Symbol symbol = symbolTable.getSymbol(type.getName());
+
+                    if (symbol != null)
+                        result.getExportedSymbols().add(symbol);
+                }
+            } else if (def.topLevelFunctionDefinition() != null) {
+                final FrayFunction function = visitTopLevelFunctionDefinition(def.topLevelFunctionDefinition());
+
+                if (function != null) {
+                    final String name = def.topLevelFunctionDefinition().functionSignature().name.getText();
+                    final Symbol symbol = symbolTable.getSymbol(name);
+
+                    if (symbol != null)
+                        result.getExportedSymbols().add(symbol);
+                }
+            } else if (def.topLevelVariableDeclaration() != null) {
+                final FraySet set = visitTopLevelVariableDeclaration(def.topLevelVariableDeclaration());
+
+                if (set != null) {
+                    for (FrayDatum datum : set.getItems()) {
+                        // Hacky, I know
+                        final String name = datum.toString();
+                        final Symbol symbol = symbolTable.getSymbol(name);
+
+                        if (symbol != null)
+                            result.getExportedSymbols().add(symbol);
+                    }
                 }
             } else visitTopLevelDefinition(def);
         }
 
-        if (debug) {
-            symbolTable.dumpSymbols();
+        printDebug("Exported symbols: ");
+
+        for (Symbol symbol : result.getExportedSymbols()) {
+            printDebug(String.format("  '%s' => %s", symbol.getName(), symbol.getValue()));
         }
 
         return result;
@@ -524,7 +558,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     @Override
     public FrayDatum visitExportDeclaration(FrayParser.ExportDeclarationContext ctx) {
         try {
-            final Scope loaded = loadLibrary(ctx.source);
+            final FrayLibrary loaded = loadLibrary(ctx.source);
             printDebug(String.format("before export from %s", ctx.source.getText()));
 
             if (debug)
@@ -644,12 +678,9 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     @Override
     public FrayDatum visitImportDeclaration(FrayParser.ImportDeclarationContext ctx) {
         try {
-            final Scope imported = loadLibrary(ctx.source);
+            final FrayLibrary imported = loadLibrary(ctx.source);
             final Scope exported = new Scope();
             printDebug(String.format("Imported %s", ctx.source.getText()));
-            printDebug("All exported from library:");
-
-            if (debug) imported.dumpSymbols();
 
             importSymbols(imported, exported, ctx.importOf());
             printDebug("All ultimately imported:");
@@ -657,14 +688,14 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
             if (debug) exported.dumpSymbols();
 
             if (ctx.importAs() == null) {
-                printDebug(String.format("IMPORTED AS-IS %S:", ctx.importAs().alias.getText()));
+                printDebug(String.format("Imported library %s into global scope:", ctx.source.getText()));
 
                 if (debug)
                     exported.dumpSymbols();
                 symbolTable.load(exported);
                 return super.visitImportDeclaration(ctx);
             } else {
-                final FrayDatum library = new FrayDatum(ctx, this) {
+                final FrayDatum libraryObject = new FrayDatum(ctx, this) {
                     @Override
                     public String toString() {
                         return String.format("[Library:%s]", ctx.source.getText());
@@ -676,15 +707,15 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
                     }
                 };
 
-                printDebug(String.format("IMPORTED AS %S:", ctx.importAs().alias.getText()));
+                printDebug(String.format("Imported library %s as '%s':", ctx.source.getText(), ctx.importAs().alias.getText()));
 
                 if (debug)
                     exported.dumpSymbols();
 
-                library.getSymbolTable().load(exported);
-                symbolTable.setValue(ctx.importAs().alias.getText(), library, ctx, this, true);
+                libraryObject.getSymbolTable().load(exported);
+                symbolTable.setFinal(ctx.importAs().alias.getText(), libraryObject, ctx, this);
 
-                return library;
+                return libraryObject;
             }
         } catch (Exception exc) {
             // Todo: Figure what is even null here
@@ -851,10 +882,14 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
 
     @Override
     public FrayString visitStringLiteralExpression(FrayParser.StringLiteralExpressionContext ctx) {
-        if (ctx.string() instanceof FrayParser.SimpleStringContext) {
-            // Todo: interpolation :)
-            final String str = ((FrayParser.SimpleStringContext) ctx.string()).STRING().getText().replaceAll(QUOTES, "");
-            return new FrayString(ctx, this, str);
+        try {
+            if (ctx.string() instanceof FrayParser.SimpleStringContext) {
+                // Todo: interpolation :)
+                final String str = ((FrayParser.SimpleStringContext) ctx.string()).STRING().getText().replaceAll(QUOTES, "");
+                return new FrayString(ctx, this, str);
+            }
+        } catch (FrayException exc) {
+            errors.add(exc);
         }
 
         return null;
@@ -884,15 +919,16 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     }
 
     @Override
-    public FrayDatum visitTopLevelFunctionDefinition(FrayParser.TopLevelFunctionDefinitionContext ctx) {
+    public FrayFunction visitTopLevelFunctionDefinition(FrayParser.TopLevelFunctionDefinitionContext ctx) {
         try {
             final String name = ctx.functionSignature().name.getText();
-            symbolTable.setValue(name, compileFunctionBody(ctx.functionBody(), name, null), ctx, this, true);
+            final FrayFunction function = compileFunctionBody(ctx.functionBody(), name, null);
+            symbolTable.setFinal(name, function, ctx, this);
+            return function;
         } catch (FrayException exc) {
             errors.add(exc);
+            return null;
         }
-
-        return null;
     }
 
     @Override
@@ -906,15 +942,27 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     }
 
     @Override
-    public FrayDatum visitTopLevelVariableDeclaration(FrayParser.TopLevelVariableDeclarationContext ctx) {
+    public FraySet visitTopLevelVariableDeclaration(FrayParser.TopLevelVariableDeclarationContext ctx) {
         try {
             final boolean isFinal = ctx.FINAL() != null;
+            final List<FrayDatum> exportedSymbols = new ArrayList<>();
 
             for (FrayParser.VariableDeclarationContext declaration : ctx.variableDeclaration()) {
                 final String name = declaration.name.getText();
                 final FrayDatum value = declaration.expression() != null ? visitExpression(declaration.expression()) : new FrayNull();
                 symbolTable.setValue(name, value, ctx, this, isFinal);
+
+                exportedSymbols.add(new FrayDatum(declaration, this) {
+                    @Override
+                    public String toString() {
+                        return name;
+                    }
+                });
             }
+
+            final FraySet set = new FraySet(ctx, this);
+            set.getItems().addAll(exportedSymbols);
+            return set;
         } catch (FrayException exc) {
             errors.add(exc);
         }

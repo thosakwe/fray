@@ -16,7 +16,7 @@ public class FrayIterator extends FrayDatum {
         super(source, interpreter);
         this.set = set;
         getSymbolTable().getSymbols().add(currentSymbol());
-        getSymbolTable().setValue("moveNext", moveNext(), source, interpreter);
+        registerFinalMember("moveNext", moveNext());
     }
 
     private Symbol currentSymbol() {
