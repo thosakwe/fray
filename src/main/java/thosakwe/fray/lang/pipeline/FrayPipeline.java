@@ -12,6 +12,7 @@ public class FrayPipeline {
             new StringInterpolatorTransformer(),
             new AssignmentTransformer()
     });
+
     public static final String STDIN = "[stdin]";
 
     private boolean debug = false;
@@ -32,6 +33,7 @@ public class FrayPipeline {
         final FrayPipeline pipeline = new FrayPipeline();
         pipeline.transformers.addAll(transformers);
         pipeline.transformers.addAll(other.transformers);
+        pipeline.setDebug(isDebug() || other.isDebug());
         return pipeline;
     }
 

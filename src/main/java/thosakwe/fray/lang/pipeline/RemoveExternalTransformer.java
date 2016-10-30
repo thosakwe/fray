@@ -1,5 +1,6 @@
 package thosakwe.fray.lang.pipeline;
 
+import thosakwe.fray.Fray;
 import thosakwe.fray.grammar.FrayBaseVisitor;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.grammar.FrayVisitor;
@@ -14,7 +15,7 @@ import java.util.regex.Pattern;
  */
 public class RemoveExternalTransformer extends FrayTransformer {
     @Override
-    boolean claim(FrayAsset asset) {
+    public boolean claim(FrayAsset asset) {
         return asset.getExtension().equals("fray");
     }
 
@@ -24,22 +25,12 @@ public class RemoveExternalTransformer extends FrayTransformer {
     }
 
     @Override
-    FrayAsset transform(FrayAsset asset) throws IOException {
+    public FrayAsset transform(FrayAsset asset) throws IOException {
         final String src = asset.readAsString();
         final FrayParser parser = parse(src);
         final List<String> remove = new ArrayList<>();
 
         final FrayVisitor visitor = new FrayBaseVisitor() {
-            boolean hasExternal(List<FrayParser.AnnotationContext> annotations) {
-                for (FrayParser.AnnotationContext annotation : annotations) {
-                    if (annotation.expression() instanceof FrayParser.IdentifierExpressionContext
-                            && annotation.expression().getText().equals("external"))
-                        return true;
-                }
-
-                return false;
-            }
-
             @Override
             public Object visitCompilationUnit(FrayParser.CompilationUnitContext ctx) {
 
@@ -53,7 +44,7 @@ public class RemoveExternalTransformer extends FrayTransformer {
 
             @Override
             public Object visitClassDefinition(FrayParser.ClassDefinitionContext ctx) {
-                if (hasExternal(ctx.annotation())) {
+                if (Fray.annotationsContainExternal(ctx.annotation())) {
                     remove.add(getNodeText(src, ctx));
                     return null;
                 }
@@ -63,7 +54,7 @@ public class RemoveExternalTransformer extends FrayTransformer {
 
             @Override
             public Object visitTopLevelFunctionDefinition(FrayParser.TopLevelFunctionDefinitionContext ctx) {
-                if (hasExternal(ctx.functionSignature().annotation())) {
+                if (Fray.annotationsContainExternal(ctx.functionSignature().annotation())) {
                     remove.add(getNodeText(src, ctx));
                     return null;
                 }
@@ -73,7 +64,7 @@ public class RemoveExternalTransformer extends FrayTransformer {
 
             @Override
             public Object visitTopLevelVariableDeclaration(FrayParser.TopLevelVariableDeclarationContext ctx) {
-                if (hasExternal(ctx.annotation())) {
+                if (Fray.annotationsContainExternal(ctx.annotation())) {
                     remove.add(getNodeText(src, ctx));
                     return null;
                 }

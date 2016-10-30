@@ -4,6 +4,8 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.cli.*;
 import thosakwe.fray.Fray;
+import thosakwe.fray.compiler.FrayCompiler;
+import thosakwe.fray.compiler.FrayToJavaScriptCompiler;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.lang.FrayInterpreter;
@@ -13,6 +15,8 @@ import thosakwe.fray.lang.data.FrayDatum;
 import thosakwe.fray.lang.data.FrayFunction;
 import thosakwe.fray.lang.data.FrayNumber;
 import thosakwe.fray.lang.errors.FrayException;
+import thosakwe.fray.lang.pipeline.FrayTransformer;
+import thosakwe.fray.lang.pipeline.StringInterpolatorTransformer;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -44,12 +48,90 @@ public class Main {
                 return;
             }
 
+            if (commandLine.hasOption("compile")) {
+                FrayAsset compilationAsset;
+                FrayCompiler compiler = null;
+
+                if (commandLine.hasOption("read-stdin")) {
+                    compilationAsset = new FrayAsset("fray", FrayPipeline.STDIN, FrayPipeline.STDIN, System.in);
+                } else {
+                    if (commandLine.getArgList().isEmpty()) {
+                        printUsage(options);
+                        System.exit(1);
+                        return;
+                    }
+
+                    compilationAsset = FrayAsset.forFile(commandLine.getArgList().get(0));
+                }
+
+                final String to = commandLine.getOptionValue("compile").toLowerCase().trim();
+
+                switch (to) {
+                    case "javascript":
+                    case "js":
+                        compiler = new FrayToJavaScriptCompiler(compilationAsset, commandLine.hasOption("verbose"));
+                        break;
+                    default:
+                        throw new Exception(String.format("Fray does not support compilation to %s. Yet. :)", to));
+                }
+
+                // Build a pipeline
+
+                final FrayTransformer coreImporter = new FrayTransformer() {
+                    @Override
+                    public boolean claim(FrayAsset asset) {
+                        return asset.getExtension().equals("fray");
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "<core> Importer";
+                    }
+
+                    @Override
+                    public FrayAsset transform(FrayAsset asset) throws IOException {
+                        final String src = asset.readAsString();
+                        return asset.changeText("import <core>;\n" + src);
+                    }
+                };
+
+                final FrayPipeline compilationPipeline = new FrayPipeline(new FrayTransformer[]{
+                        coreImporter,
+                        new StringInterpolatorTransformer(),
+                        compiler.toTransformer()});
+                compilationPipeline.setDebug(commandLine.hasOption("verbose"));
+
+                final FrayAsset compilerOutput = compilationPipeline.transform(compilationAsset);
+
+                if (commandLine.hasOption("write-stdout")) {
+                    if (commandLine.hasOption("verbose")) {
+                        System.out.println("------------");
+                        System.out.println();
+                        System.out.println("COMPILER OUTPUT STARTS BELOW:");
+                        System.out.println();
+                    }
+
+                    System.out.print(compilerOutput.readAsString());
+                } else if (commandLine.hasOption("out")) {
+                    final String filename = commandLine.getOptionValue("out");
+                    final PrintStream outputStream = new PrintStream(filename);
+                    outputStream.print(compilerOutput.readAsString());
+                    outputStream.close();
+                } else {
+                    System.err.println("No output filename provided.");
+                    System.exit(1);
+                }
+
+                return;
+            }
+
             if (commandLine.hasOption("read-stdin")) {
                 runProgram(new FrayAsset("fray", FrayPipeline.STDIN, FrayPipeline.STDIN, System.in), pipeline, commandLine);
             } else {
                 if (commandLine.getArgList().isEmpty()) {
                     printUsage(options);
                     System.exit(1);
+                    return;
                 }
 
                 final String filename = commandLine.getArgList().get(0);
@@ -65,7 +147,6 @@ public class Main {
             System.exit(1);
         } catch (Exception exc) {
             System.err.println(exc.getMessage());
-            exc.printStackTrace();
             System.exit(1);
         }
     }
@@ -73,10 +154,13 @@ public class Main {
     private static Options cliOptions() {
         final Options options = new Options();
         options
+                .addOption("a", "repl", false, "Run the interactive REPL.")
+                .addOption("to", "compile", true, "Compile Fray source to another language (js/javascript, dart).")
                 .addOption("d", "verbose", false, "Enable verbose debug output.")
                 .addOption("h", "help", false, "Show this usage information.")
-                .addOption("a", "repl", false, "Run the interactive REPL.")
+                .addOption("o", "out", true, "Write compiler output to the given file.")
                 .addOption("stdin", "read-stdin", false, "Interpret input from stdin.")
+                .addOption("stdout", "write-stdout", false, "Print compiler output to stdout.")
                 .addOption("v", "version", false, "Print the interpreter version.");
         return options;
     }

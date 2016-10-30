@@ -3,6 +3,8 @@ class Foo {
 
     fn bar() => 'world';
 
+    fn baz(n) => n * 2;
+
     fn greet() => print('Hello, %{this.bar()}!');
 }
 

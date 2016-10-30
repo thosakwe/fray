@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public abstract class FrayTransformer {
-    abstract boolean claim(FrayAsset asset);
+    public abstract boolean claim(FrayAsset asset);
 
     public abstract String getName();
 
@@ -18,7 +18,7 @@ public abstract class FrayTransformer {
         return source.substring(node.start.getStartIndex(), node.stop.getStopIndex() + 1);
     }
 
-    abstract FrayAsset transform(FrayAsset asset) throws IOException;
+    public abstract FrayAsset transform(FrayAsset asset) throws IOException;
 
     public FrayParser parse(String text) {
         final ANTLRInputStream antlrInputStream = new ANTLRInputStream(text);
@@ -27,7 +27,7 @@ public abstract class FrayTransformer {
         return new FrayParser(tokenStream);
     }
 
-    String replaceNode(ParserRuleContext needle, String haystack, String with) {
+    public String replaceNode(ParserRuleContext needle, String haystack, String with) {
         return haystack.substring(0, needle.start.getStartIndex()) + with + haystack.substring(needle.stop.getStopIndex());
     }
 }
