@@ -4,7 +4,64 @@ final external = '[shimmed at compile time]';
 class Exception {
     let message, stack;
 
-    constructor(msg) {}
+    constructor(message) {
+        this.message = message;
+    }
+}
+
+@external
+class Iterator {
+    let current, i = -1, items;
+
+    constructor(items) {
+        this.items = items;
+    }
+
+    fn moveNext() {
+        if (this.i < (this.items.length - 1)) {
+            this.i += 1; // Todo: Unary this :)
+            this.current = (this.items[this.i]);
+            ret true;
+        } else {
+            ret false;
+        }
+    }
+
+    fn peek() {
+        if ((this.i + 1) < this.items.length) {
+            ret this.items[this.i + 1];
+        }
+
+        ret null;
+    }
+}
+
+@external
+class Set {
+    final iterator;
+
+    constructor() {
+        Array.call(this);
+        this.iterator = new Iterator(this);
+    }
+
+    fn str() {
+        let str = '[', i = 0;
+
+        for (item : this) {
+            if (i > 0) {
+                str += ', ';
+            }
+
+            if (item.str != null) {
+                str += item.str();
+            } else {
+                str += item;
+            }
+        }
+
+        ret str + ']';
+    }
 }
 
 @external fn print(msg) {}

@@ -8,10 +8,14 @@ import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.lang.FrayInterpreter;
 import thosakwe.fray.lang.pipeline.FrayAsset;
+import thosakwe.fray.lang.pipeline.FrayPipeline;
+import thosakwe.fray.lang.pipeline.FrayTransformer;
+import thosakwe.fray.lang.pipeline.StringInterpolatorTransformer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringWriter;
 import java.net.URL;
 import java.util.List;
 
@@ -67,19 +71,40 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
 
 
     private InputStream resolveImport(FrayParser.ImportSourceContext source) throws FrayCompilerException, IOException {
+        InputStream inputStream;
+        String name;
+        String resourceName;
+
         if (source.standardImport() != null) {
-            final String resourceName = String.format("inc/%s.fray", source.standardImport().source.getText());
+            name = source.standardImport().source.getText();
+            resourceName = String.format("inc/%s.fray", name);
             final URL url = FrayInterpreter.class.getClassLoader().getResource(resourceName);
 
             if (url == null)
                 throw new FrayCompilerException(String.format("Failed to import library %s. Invalid location.", source.getText()), source, this);
 
             printDebug(String.format("Importing stdlib: '%s'", url));
-            return url.openStream();
+            inputStream =  url.openStream();
         } else if (source.expression() instanceof FrayParser.StringLiteralExpressionContext) {
-            final String filename = source.expression().getText().replaceAll("(^')|('$)", "");
-            return new FileInputStream(filename);
-        } else throw new FrayCompilerException(String.format("Invalid import source: '%s'", source.getText()), source, this);
+            name = source.expression().getText().replaceAll("(^')|('$)", "");
+            resourceName = name + ".fray";
+            inputStream = new FileInputStream(resourceName);
+        } else
+            throw new FrayCompilerException(String.format("Invalid import source: '%s'", source.getText()), source, this);
+
+        final FrayAsset asset = new FrayAsset("fray", resourceName, name, inputStream);
+        final FrayPipeline pipeline = new FrayPipeline(new FrayTransformer[]{new StringInterpolatorTransformer()});
+        return pipeline.transform(asset).getInputStream();
+    }
+
+    @Override
+    public Object visitBlock(FrayParser.BlockContext ctx) {
+        ctx.statement().forEach(stmt -> {
+            printDebug(String.format("GOT TO BE THERE: %S", stmt.getText()));
+            visitStatement(stmt);
+        });
+
+        return null;
     }
 
     @Override
@@ -98,6 +123,26 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             }
         }
 
+        // Todo: Named constructors with a switch statement
+        builder.println("var constructorName = arguments.length > 0 ? arguments[0] : undefined;");
+
+        for (FrayParser.ConstructorDefinitionContext def : ctx.constructorDefinition()) {
+            final String constructorName = def.name != null ? def.name.getText() : "";
+            builder.println();
+            builder.println(String.format("if (constructorName === '%s') {", constructorName));
+            builder.indent();
+            builder.println("var _self = this;");
+
+            for (int i = 0; i < def.functionBody().parameters().IDENTIFIER().size(); i++) {
+                final String paramName = def.functionBody().parameters().IDENTIFIER(i).getText();
+                builder.println(String.format("var %s = arguments.length > %d ? arguments[%d] : undefined;", paramName, i + 1, i + 1));
+            }
+
+            visitFunctionBody(def.functionBody());
+            builder.outdent();
+            builder.println("}");
+        }
+
         builder.outdent();
         builder.println("}");
         builder.println();
@@ -106,13 +151,13 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
         builder.println(String.format("return '[Type:%s]';", className));
         builder.outdent();
         builder.println("};");
+        builder.println();
         builder.println(String.format("%s.prototype.str = function() {", className));
         builder.indent();
         builder.println(String.format("return '[Instance of %s]';", className));
         builder.outdent();
         builder.println("};");
         builder.println();
-        // Todo: Named constructors with a switch statement
 
         // All func defs
         for (FrayParser.TopLevelFunctionDefinitionContext func : ctx.topLevelFunctionDefinition()) {
@@ -133,28 +178,66 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
 
     @Override
     public String visitCompilationUnit(FrayParser.CompilationUnitContext ctx) {
-        printDebug(String.format("Visiting compilation unit: '%s'", ctx.getText()));
         ctx.topLevelDefinition().forEach(this::visitTopLevelDefinition);
         return null;
     }
 
     public String visitExpression(FrayParser.ExpressionContext ctx) {
+        if (ctx instanceof FrayParser.AssignmentExpressionContext) {
+            final FrayParser.AssignmentExpressionContext assignmentExpressionContext = (FrayParser.AssignmentExpressionContext) ctx;
+            final String left = visitExpression(assignmentExpressionContext.left);
+            final String right = visitExpression(assignmentExpressionContext.right);
+            final String op = assignmentExpressionContext.assignmentOperator().getText();
+
+            switch (op) {
+                case "^=":
+                    return String.format("%s = Math.pow(%s, %s)", left, left, right);
+                default:
+                    return String.format("%s %s %s", left, op, right);
+            }
+        }
+
         if (ctx instanceof FrayParser.BinaryExpressionContext) {
             final FrayParser.BinaryExpressionContext binaryExpressionContext = (FrayParser.BinaryExpressionContext) ctx;
             final String left = visitExpression(binaryExpressionContext.left);
             final String right = visitExpression(binaryExpressionContext.right);
             final String op = binaryExpressionContext.binaryOperator().getText();
 
+            // Todo: Custom operators
             switch (op) {
                 case "^":
                     return String.format("Math.pow(%s, %s)", left, right);
+                case "==":
+                    return String.format("%s === %s", left, right);
+                case "!=":
+                    return String.format("%s !== %s", left, right);
                 default:
                     return String.format("%s %s %s", left, op, right);
             }
         }
 
+        if (ctx instanceof FrayParser.BooleanLiteralExpressionContext) {
+            return ctx.getText();
+        }
+
         if (ctx instanceof FrayParser.IdentifierExpressionContext) {
             return ((FrayParser.IdentifierExpressionContext) ctx).IDENTIFIER().getText();
+        }
+
+        if (ctx instanceof FrayParser.InclusiveRangeExpressionContext) {
+            final FrayParser.InclusiveRangeExpressionContext inclusiveRangeExpressionContext = (FrayParser.InclusiveRangeExpressionContext) ctx;
+            final String lower = visitExpression(inclusiveRangeExpressionContext.lower);
+            final String upper = visitExpression(inclusiveRangeExpressionContext.upper);
+            final StringWriter builder = new StringWriter();
+            builder.write("(function () {");
+            builder.write("var a = [];");
+            builder.write(String.format("for (var i = %s; i <= %s; i++) {", lower, upper));
+            builder.write("a.push(i);");
+            builder.write("}");
+            builder.write("a.iterator = new Iterator('', a);");
+            builder.write("return a;");
+            builder.write("})()");
+            return builder.toString();
         }
 
         if (ctx instanceof FrayParser.InvocationExpressionContext) {
@@ -179,10 +262,31 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
 
             // Todo: Support named constructors...
             final CodeBuilder builder = new CodeBuilder();
-            builder.print(String.format("new %s(", visitExpression(newExpressionContext.type)));
-            printArgs(newExpressionContext.args, builder);
-            builder.write(")");
+
+            if (newExpressionContext.type instanceof FrayParser.MemberExpressionContext) {
+                final FrayParser.MemberExpressionContext memberExpressionContext = (FrayParser.MemberExpressionContext) newExpressionContext.type;
+                builder.write(String.format("new %s('%s'", visitExpression(memberExpressionContext.expression()), memberExpressionContext.IDENTIFIER().getText()));
+
+                if (!newExpressionContext.args.isEmpty())
+                    builder.write(", ");
+
+                printArgs(newExpressionContext.args, builder);
+                builder.write(")");
+            } else {
+                builder.write(String.format("new %s(''", visitExpression(newExpressionContext.type)));
+
+                if (!newExpressionContext.args.isEmpty())
+                    builder.write(", ");
+
+                printArgs(newExpressionContext.args, builder);
+                builder.write(")");
+            }
+
             return builder.toString();
+        }
+
+        if (ctx instanceof FrayParser.NullLiteralExpressionContext) {
+            return "null";
         }
 
         if (ctx instanceof FrayParser.NumericLiteralExpressionContext) {
@@ -196,6 +300,13 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             return String.format("(%s)", visitExpression(((FrayParser.ParenthesizedExpressionContext) ctx).expression()));
         }
 
+        if (ctx instanceof FrayParser.SetIndexerExpressionContext) {
+            final FrayParser.SetIndexerExpressionContext setIndexerExpressionContext = (FrayParser.SetIndexerExpressionContext) ctx;
+            final String target = visitExpression(setIndexerExpressionContext.target);
+            final String index = visitExpression(setIndexerExpressionContext.index);
+            return String.format("%s[%s]", target, index);
+        }
+
         if (ctx instanceof FrayParser.StringLiteralExpressionContext) {
             // Todo: Raw strings
             if (((FrayParser.StringLiteralExpressionContext) ctx).string() instanceof FrayParser.SimpleStringContext) {
@@ -207,18 +318,38 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             return "_self";
         }
 
-        return "null";
+        return String.format("'Cannot compile expressions of type %s yet. ):'", ctx.getClass().getSimpleName());
     }
 
     @Override
     public Object visitFunctionBody(FrayParser.FunctionBodyContext ctx) {
         if (ctx.blockBody() != null) {
-            for (FrayParser.StatementContext stmt : ctx.blockBody().block().statement()) {
-                visitStatement(stmt);
-            }
+            ctx.blockBody().block().statement().forEach(this::visitStatement);
         } else if (ctx.expressionBody() != null) {
             final String expression = visitExpression(ctx.expressionBody().expression());
             builder.println(String.format("return %s;", expression));
+        }
+
+        return null;
+    }
+
+    @Override
+    public Object visitIfStatement(FrayParser.IfStatementContext ctx) {
+        for (int i = 0; i < ctx.ifBlock().size(); i++) {
+            final FrayParser.IfBlockContext ifBlockContext = ctx.ifBlock(i);
+            builder.println(String.format("if ((%s) === true) {", visitExpression(ifBlockContext.condition)));
+            builder.indent();
+            ifBlockContext.block().statement().forEach(this::visitStatement);
+            builder.outdent();
+            builder.println("}");
+        }
+
+        if (ctx.elseBlock() != null) {
+            builder.println("else {");
+            builder.indent();
+            ctx.elseBlock().block().statement().forEach(this::visitStatement);
+            builder.outdent();
+            builder.println("}");
         }
 
         return null;
@@ -246,7 +377,31 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
 
     public Object visitStatement(FrayParser.StatementContext ctx) {
         if (ctx instanceof FrayParser.ExpressionStatementContext) {
-            builder.println(String.format("%s;", visitExpression(((FrayParser.ExpressionStatementContext) ctx).expression())));
+            final FrayParser.ExpressionContext expressionContext = ((FrayParser.ExpressionStatementContext) ctx).expression();
+
+            if (expressionContext instanceof FrayParser.InvocationExpressionContext || expressionContext instanceof FrayParser.AssignmentExpressionContext) {
+                builder.println(String.format("%s;", visitExpression(expressionContext)));
+            }
+        }
+
+        if (ctx instanceof FrayParser.ForStatementContext) {
+            builder.println(String.format("var _it = new Iterator('', %s);", visitExpression(((FrayParser.ForStatementContext) ctx).in)));
+            builder.println("while (_it.moveNext() === true) {");
+            builder.indent();
+            final FrayParser.ForStatementContext forStatementContext = (FrayParser.ForStatementContext) ctx;
+            builder.println(String.format("var %s = _it.current;", forStatementContext.as.getText()));
+            visitBlock(forStatementContext.block());
+            builder.outdent();
+            builder.println("}");
+        }
+
+        if (ctx instanceof FrayParser.IfStatementContext) {
+            return visitIfStatement((FrayParser.IfStatementContext) ctx);
+        }
+
+        if (ctx instanceof FrayParser.ReturnStatementContext) {
+            final FrayParser.ExpressionContext expr = ((FrayParser.ReturnStatementContext) ctx).expression();
+            builder.println(String.format("return %s;", visitExpression(expr)));
         }
 
         if (ctx instanceof FrayParser.VariableDeclarationStatementContext) {
@@ -258,6 +413,14 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
                     builder.println(String.format("var %s = %s;", name, value));
                 } else builder.println(String.format("var %s;", name));
             }
+        }
+
+        if (ctx instanceof FrayParser.WhileStatementContext) {
+            builder.println(String.format("while ((%s) === true) {", visitExpression(((FrayParser.WhileStatementContext) ctx).expression())));
+            builder.indent();
+            ((FrayParser.WhileStatementContext) ctx).block().statement().forEach(this::visitStatement);
+            builder.outdent();
+            builder.println("}");
         }
 
         return null;

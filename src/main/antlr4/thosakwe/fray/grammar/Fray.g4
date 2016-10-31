@@ -63,9 +63,9 @@ TRUE: 'true';
 
 // Numeric Literals
 fragment POW10: ('E' | 'e') '-'? [0-9]+;
-DOUBLE: [0-9]+ '.' [0-9]+ POW10?;
+DOUBLE: '-' ? [0-9]+ '.' [0-9]+ POW10?;
 HEX: '0x' [A-F0-9]+;
-INT: [0-9]+ POW10?;
+INT: '-' ? [0-9]+ POW10?;
 
 // String Literals
 fragment ESCAPED: '\\\'' | '\\r' | '\\n';

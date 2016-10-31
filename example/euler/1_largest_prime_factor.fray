@@ -25,13 +25,9 @@ fn main() {
     let largest = 0;
 
     for (i : [1 .. n]) {
-        print('Checking prime: %i...');
-
-        if (isPrime(i)) {
-            print('%i IS PRIME!!!');
-            if (i > largest) {
-                largest = i;
-            }
+        // Todo: ugly parens ):
+        if (isPrime(i) && (i > largest)) {
+            largest = i;
         }
     }
 
