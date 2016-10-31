@@ -1,4 +1,4 @@
-package thosakwe.fray.interpreter.data;
+package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;

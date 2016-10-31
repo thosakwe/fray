@@ -1,9 +1,9 @@
-package thosakwe.fray.interpreter.data;
+package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.Symbol;
-import thosakwe.fray.interpreter.pipeline.FrayAsset;
+import thosakwe.fray.analysis.Symbol;
+import thosakwe.fray.pipeline.FrayAsset;
 
 import java.util.ArrayList;
 import java.util.List;

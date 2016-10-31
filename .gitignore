@@ -123,3 +123,4 @@ jspm_packages
 example/**/*.js
 src/test/fray/**/*.js
 
+settings.xml

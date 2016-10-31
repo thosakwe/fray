@@ -1,8 +1,8 @@
-package thosakwe.fray.interpreter.data;
+package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.Symbol;
+import thosakwe.fray.analysis.Symbol;
 import thosakwe.fray.interpreter.errors.FrayException;
 
 import java.util.List;

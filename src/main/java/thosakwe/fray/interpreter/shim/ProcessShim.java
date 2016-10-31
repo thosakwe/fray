@@ -3,8 +3,8 @@ package thosakwe.fray.interpreter.shim;
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.Fray;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.data.*;
 import thosakwe.fray.interpreter.errors.FrayException;
+import thosakwe.fray.lang.*;
 
 import java.util.List;
 

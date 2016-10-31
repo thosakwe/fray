@@ -1,8 +1,9 @@
-package thosakwe.fray.interpreter;
+package thosakwe.fray.analysis;
 
 import org.antlr.v4.runtime.tree.ParseTree;
-import thosakwe.fray.interpreter.data.FrayDatum;
-import thosakwe.fray.interpreter.data.FrayLibrary;
+import thosakwe.fray.interpreter.FrayInterpreter;
+import thosakwe.fray.lang.FrayDatum;
+import thosakwe.fray.lang.FrayLibrary;
 import thosakwe.fray.interpreter.errors.FrayException;
 
 import java.util.ArrayList;

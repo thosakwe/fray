@@ -5,15 +5,17 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.cli.CommandLine;
+import thosakwe.fray.analysis.Scope;
+import thosakwe.fray.analysis.Symbol;
 import thosakwe.fray.grammar.FrayBaseVisitor;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
-import thosakwe.fray.interpreter.data.*;
 import thosakwe.fray.interpreter.errors.FrayException;
 import thosakwe.fray.interpreter.errors.FrayExceptionDatum;
-import thosakwe.fray.interpreter.pipeline.FrayAsset;
-import thosakwe.fray.interpreter.pipeline.FrayPipeline;
+import thosakwe.fray.pipeline.FrayAsset;
+import thosakwe.fray.pipeline.FrayPipeline;
 import thosakwe.fray.interpreter.shim.*;
+import thosakwe.fray.lang.*;
 
 import java.io.IOException;
 import java.net.URL;
@@ -350,7 +352,7 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
     public FrayDatum visitClassDefinition(FrayParser.ClassDefinitionContext ctx) {
         try {
             final String name = ctx.name.getText();
-            FrayType parentType = null;
+            FrayType parentType = FrayType.OBJECT;
 
             if (ctx.EXTENDS() != null) {
                 final FrayDatum superClass = visitExpression(ctx.superClass);
@@ -375,7 +377,14 @@ public class FrayInterpreter extends FrayBaseVisitor<FrayDatum> {
                     getInterpreter().getStack().push(new FrayStackElement(getName(), source.getSourcePath(), ctx));
                     getInterpreter().getSymbolTable().create();
 
+                    final FrayType self = this;
+
                     final FrayDatum instance = new FrayDatum(ctx, getInterpreter()) {
+                        @Override
+                        public FrayType getType() {
+                            return self;
+                        }
+
                         @Override
                         public String toString() {
                             return String.format("[Instance of '%s']", getName());

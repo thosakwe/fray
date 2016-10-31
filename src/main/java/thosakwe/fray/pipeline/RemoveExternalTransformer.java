@@ -1,4 +1,4 @@
-package thosakwe.fray.interpreter.pipeline;
+package thosakwe.fray.pipeline;
 
 import thosakwe.fray.Fray;
 import thosakwe.fray.grammar.FrayBaseVisitor;

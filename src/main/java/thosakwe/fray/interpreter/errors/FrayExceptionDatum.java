@@ -2,7 +2,8 @@ package thosakwe.fray.interpreter.errors;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.data.FrayDatum;
+import thosakwe.fray.lang.FrayDatum;
+import thosakwe.fray.lang.FrayType;
 
 public class FrayExceptionDatum extends FrayDatum {
     private final String message;
@@ -10,6 +11,11 @@ public class FrayExceptionDatum extends FrayDatum {
     public FrayExceptionDatum(ParseTree source, FrayInterpreter interpreter, String message) {
         super(source, interpreter);
         this.message = message;
+    }
+
+    @Override
+    public FrayType getType() {
+        return FrayExceptionType.TYPE;
     }
 
     public FrayException toException() {

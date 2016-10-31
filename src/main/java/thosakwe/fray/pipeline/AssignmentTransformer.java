@@ -1,4 +1,4 @@
-package thosakwe.fray.interpreter.pipeline;
+package thosakwe.fray.pipeline;
 
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import thosakwe.fray.grammar.FrayBaseListener;

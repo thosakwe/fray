@@ -1,9 +1,9 @@
-package thosakwe.fray.interpreter.data;
+package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.Scope;
-import thosakwe.fray.interpreter.Symbol;
+import thosakwe.fray.analysis.Scope;
+import thosakwe.fray.analysis.Symbol;
 import thosakwe.fray.interpreter.errors.FrayException;
 
 import java.util.ArrayList;
@@ -54,6 +54,10 @@ public class FrayDatum {
         if (iterator != null && !(iterator instanceof FrayIterator))
             throw new FrayException(String.format("'%s' is not an iterator.", iterator.toString()), iterator.getSource(), interpreter);
         else return iterator != null ? (FrayIterator) iterator : null;
+    }
+
+    public FrayType getType() {
+        return FrayType.OBJECT;
     }
 
     public Map<String, FrayFunction> getOperators() {

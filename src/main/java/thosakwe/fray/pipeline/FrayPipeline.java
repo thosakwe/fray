@@ -1,4 +1,4 @@
-package thosakwe.fray.interpreter.pipeline;
+package thosakwe.fray.pipeline;
 
 import java.io.IOException;
 import java.util.ArrayList;

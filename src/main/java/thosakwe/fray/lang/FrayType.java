@@ -1,4 +1,4 @@
-package thosakwe.fray.interpreter.data;
+package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -11,6 +11,20 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class FrayType extends FrayDatum {
+    public static final FrayType OBJECT = new FrayType(null, null, null) {
+        @Override
+        public String getName() {
+            return "Object";
+        }
+    };
+
+    public static final FrayType TYPE = new FrayType(null, null, OBJECT) {
+        @Override
+        public String getName() {
+            return "Type";
+        }
+    };
+
     private Map<String, FrayFunction> constructors = new HashMap<>();
     private final FrayType parentType;
 

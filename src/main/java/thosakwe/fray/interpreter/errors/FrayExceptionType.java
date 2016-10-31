@@ -2,13 +2,20 @@ package thosakwe.fray.interpreter.errors;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.data.FrayDatum;
-import thosakwe.fray.interpreter.data.FrayString;
-import thosakwe.fray.interpreter.data.FrayType;
+import thosakwe.fray.lang.FrayDatum;
+import thosakwe.fray.lang.FrayString;
+import thosakwe.fray.lang.FrayType;
 
 import java.util.List;
 
 public class FrayExceptionType extends FrayType {
+    public static final FrayType TYPE = new FrayType(null, null, FrayType.OBJECT) {
+        @Override
+        public String getName() {
+            return "Exception";
+        }
+    };
+
     public FrayExceptionType(FrayInterpreter interpreter) {
         super(null, interpreter, null);
     }

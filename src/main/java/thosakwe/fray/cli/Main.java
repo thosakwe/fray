@@ -4,19 +4,20 @@ import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.cli.*;
 import thosakwe.fray.Fray;
-import thosakwe.fray.compiler.FrayCompiler;
-import thosakwe.fray.compiler.FrayToJavaScriptCompiler;
+import thosakwe.fray.compiler.FrayTranspiler;
+import thosakwe.fray.compiler.FrayToJavaScriptTranspiler;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.pipeline.FrayAsset;
-import thosakwe.fray.interpreter.pipeline.FrayPipeline;
-import thosakwe.fray.interpreter.data.FrayDatum;
-import thosakwe.fray.interpreter.data.FrayFunction;
-import thosakwe.fray.interpreter.data.FrayNumber;
+import thosakwe.fray.lang.FrayLibrary;
+import thosakwe.fray.pipeline.FrayAsset;
+import thosakwe.fray.pipeline.FrayPipeline;
+import thosakwe.fray.lang.FrayDatum;
+import thosakwe.fray.lang.FrayFunction;
+import thosakwe.fray.lang.FrayNumber;
 import thosakwe.fray.interpreter.errors.FrayException;
-import thosakwe.fray.interpreter.pipeline.FrayTransformer;
-import thosakwe.fray.interpreter.pipeline.StringInterpolatorTransformer;
+import thosakwe.fray.pipeline.FrayTransformer;
+import thosakwe.fray.pipeline.StringInterpolatorTransformer;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -50,7 +51,7 @@ public class Main {
 
             if (commandLine.hasOption("compile")) {
                 FrayAsset compilationAsset;
-                FrayCompiler compiler = null;
+                FrayTranspiler compiler = null;
 
                 if (commandLine.hasOption("read-stdin")) {
                     compilationAsset = new FrayAsset("fray", FrayPipeline.STDIN, FrayPipeline.STDIN, System.in);
@@ -69,7 +70,7 @@ public class Main {
                 switch (to) {
                     case "javascript":
                     case "js":
-                        compiler = new FrayToJavaScriptCompiler(compilationAsset, commandLine.hasOption("verbose"));
+                        compiler = new FrayToJavaScriptTranspiler(compilationAsset, commandLine.hasOption("verbose"));
                         break;
                     default:
                         throw new Exception(String.format("Fray does not support compilation to %s. Yet. :)", to));
@@ -195,7 +196,8 @@ public class Main {
                 final FrayParser parser = new FrayParser(tokenStream);
                 final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
                 interpreter.setSource(processed);
-                final FrayDatum result = interpreter.visitCompilationUnit(compilationUnit);
+                final FrayLibrary library = interpreter.visitCompilationUnit(compilationUnit);
+                final FrayDatum result = library.getDefaultExport();
 
                 for (FrayException warning : interpreter.getWarnings()) {
                     System.err.printf("Warning: %s%n", warning.getMessage());

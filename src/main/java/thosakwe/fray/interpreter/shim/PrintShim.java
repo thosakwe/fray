@@ -2,9 +2,9 @@ package thosakwe.fray.interpreter.shim;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.data.FrayDatum;
-import thosakwe.fray.interpreter.data.FrayFunction;
-import thosakwe.fray.interpreter.data.FrayNull;
+import thosakwe.fray.lang.FrayDatum;
+import thosakwe.fray.lang.FrayFunction;
+import thosakwe.fray.lang.FrayNull;
 import thosakwe.fray.interpreter.errors.FrayException;
 
 import java.util.List;

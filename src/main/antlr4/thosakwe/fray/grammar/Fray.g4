@@ -45,6 +45,7 @@ FINALLY: 'finally';
 FN: 'fn';
 FOR: 'for';
 IF: 'if';
+IS: 'is';
 IMPORT: 'import';
 LET: 'let';
 NEW: 'new';
@@ -147,6 +148,7 @@ expression:
     | expression DOT IDENTIFIER #MemberExpression
     | left=expression assignmentOperator right=expression #AssignmentExpression
     | left=expression binaryOperator right=expression #BinaryExpression
+    | candidate=expression IS type=expression #IsExpression
     | unaryOperator expression #UnaryPrefixExpression
     | expression unaryOperator #UnaryPostfixExpression
     | condition=expression QUESTION yes=expression COLON no=expression #TernaryExpression

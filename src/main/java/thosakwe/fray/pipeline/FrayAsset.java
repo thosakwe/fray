@@ -1,4 +1,4 @@
-package thosakwe.fray.interpreter.pipeline;
+package thosakwe.fray.pipeline;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;

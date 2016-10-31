@@ -7,10 +7,10 @@ import thosakwe.fray.Fray;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.interpreter.FrayInterpreter;
-import thosakwe.fray.interpreter.pipeline.FrayAsset;
-import thosakwe.fray.interpreter.pipeline.FrayPipeline;
-import thosakwe.fray.interpreter.pipeline.FrayTransformer;
-import thosakwe.fray.interpreter.pipeline.StringInterpolatorTransformer;
+import thosakwe.fray.pipeline.FrayAsset;
+import thosakwe.fray.pipeline.FrayPipeline;
+import thosakwe.fray.pipeline.FrayTransformer;
+import thosakwe.fray.pipeline.StringInterpolatorTransformer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-public class FrayToJavaScriptCompiler extends FrayCompiler {
-    public FrayToJavaScriptCompiler(FrayAsset sourceAsset, boolean debug) {
+public class FrayToJavaScriptTranspiler extends FrayTranspiler {
+    public FrayToJavaScriptTranspiler(FrayAsset sourceAsset, boolean debug) {
         super("JavaScript", "js", sourceAsset, debug);
     }
 
@@ -107,7 +107,7 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
     private void shimExternal(String name, String prefix) {
         final String resourceName = String.format("external/js/%s.%s.js", name, prefix);
         printDebug(String.format("Shimming top-level function: %s from '%s'...", name, resourceName));
-        final URL url = FrayToJavaScriptCompiler.class.getClassLoader().getResource(resourceName);
+        final URL url = FrayToJavaScriptTranspiler.class.getClassLoader().getResource(resourceName);
         printDebug(String.format("URL: '%s'", url));
 
         try {
