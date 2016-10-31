@@ -1,0 +1,18 @@
+{
+  "compilerPath": {
+    "description": "The location of the Fray compiler executable.",
+    "type": "string",
+    "default": "fray"
+  },
+  "port": {
+    "description": "The port to run the Fray analysis server on.",
+    "type": "integer",
+    "default": 0,
+    "minimum": 0,
+    "maximum": 65535
+  },
+  "enableVerboseCompilerOutput": {
+    "type": "boolean",
+    "default": false
+  }
+}

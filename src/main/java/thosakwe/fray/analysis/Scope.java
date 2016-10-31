@@ -1,5 +1,6 @@
 package thosakwe.fray.analysis;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import thosakwe.fray.interpreter.FrayInterpreter;
 import thosakwe.fray.lang.FrayDatum;
@@ -215,5 +216,19 @@ public class Scope {
 
     public void load(FrayLibrary from) {
         load(from, false);
+    }
+
+    public Symbol put(String name, FrayDatum value,  boolean isFinal) {
+        final Symbol result = new Symbol(name, value, isFinal);
+        getInnerMostScope().symbols.add(result);
+        return result;
+    }
+
+    public Symbol put(String name, FrayDatum value) {
+        return put(name, value, false);
+    }
+
+    public Symbol putFinal(String name, FrayDatum value) {
+        return put(name, value,  true);
     }
 }

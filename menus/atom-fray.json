@@ -1,0 +1,19 @@
+{
+  "menu": [
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "Fray",
+          "submenu": [
+            {
+              "label": "Compile to JS",
+              "command": "atom-fray:compile-js"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "context-menu": {}
+}

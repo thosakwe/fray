@@ -39,7 +39,6 @@ DO: 'do';
 ELSE: 'else';
 EXPORT: 'export';
 EXTENDS: 'extends';
-FIELD: 'field';
 FINAL: 'final';
 FINALLY: 'finally';
 FN: 'fn';

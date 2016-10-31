@@ -1,9 +1,15 @@
 package thosakwe.fray.cli;
 
+import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.apache.commons.cli.*;
 import thosakwe.fray.Fray;
+import thosakwe.fray.analysis.FrayAnalysisServer;
+import thosakwe.fray.analysis.Symbol;
+import thosakwe.fray.analysis.FrayAnalyzer;
 import thosakwe.fray.compiler.FrayTranspiler;
 import thosakwe.fray.compiler.FrayToJavaScriptTranspiler;
 import thosakwe.fray.grammar.FrayLexer;
@@ -20,6 +26,7 @@ import thosakwe.fray.pipeline.FrayTransformer;
 import thosakwe.fray.pipeline.StringInterpolatorTransformer;
 
 import java.io.*;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -44,6 +51,42 @@ public class Main {
             final FrayPipeline pipeline = createPipeline();
             pipeline.setDebug(commandLine.hasOption("verbose"));
 
+            if (commandLine.hasOption("analyzeProgram")) {
+                final int port = Integer.parseInt(commandLine.getOptionValue("port", "0"));
+                final FrayAnalysisServer analysisServer = new FrayAnalysisServer(commandLine.hasOption("verbose"));
+                final ServerSocket serverSocket = analysisServer.listen(port);
+                System.out.printf("Fray analysis server listening on port %d%n", serverSocket.getLocalPort());
+                analysisServer.watch();
+                return;
+            }
+
+            if (commandLine.hasOption("code-completion")) {
+                final String filename = commandLine.getOptionValue("code-completion");
+                final int position = Integer.parseInt(commandLine.getOptionValue("position", "-1"));
+
+                final ANTLRInputStream inputStream = new ANTLRFileStream(filename);
+                final FrayLexer lexer = new FrayLexer(inputStream);
+                final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+                final FrayParser parser = new FrayParser(tokenStream);
+                final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
+                final FrayAnalyzer analyzer = new FrayAnalyzer(commandLine.hasOption("verbose"));
+                analyzer.analyzeProgram(compilationUnit);
+
+                for (Symbol symbol : analyzer.getSymbolTable().allUnique(true)) {
+                    final ParseTree sourceTree = symbol.getValue().getSource();
+
+                    if (sourceTree instanceof ParserRuleContext) {
+                        final ParserRuleContext source = (ParserRuleContext) sourceTree;
+
+                        if (source.start.getStartIndex() <= position || position == -1) {
+                            System.out.printf("%s:%s%n", symbol.getName(), symbol.getValue().getType().getName());
+                        }
+                    }
+                }
+
+                return;
+            }
+
             if (commandLine.hasOption("repl")) {
                 runRepl(pipeline, commandLine);
                 return;
@@ -51,7 +94,7 @@ public class Main {
 
             if (commandLine.hasOption("compile")) {
                 FrayAsset compilationAsset;
-                FrayTranspiler compiler = null;
+                FrayTranspiler compiler;
 
                 if (commandLine.hasOption("read-stdin")) {
                     compilationAsset = new FrayAsset("fray", FrayPipeline.STDIN, FrayPipeline.STDIN, System.in);
@@ -154,17 +197,19 @@ public class Main {
     }
 
     private static Options cliOptions() {
-        final Options options = new Options();
-        options
-                .addOption("a", "repl", false, "Run the interactive REPL.")
+        return new Options()
+                .addOption("a", "analyze", false, "Start the Fray analysis server.")
+                .addOption("cc", "code-completion", true, "Spits out all symbol names available at the given index within a source file.")
                 .addOption("to", "compile", true, "Compile Fray source to another language (js/javascript, dart).")
-                .addOption("d", "verbose", false, "Enable verbose debug output.")
+                .addOption("debug", "verbose", false, "Enable verbose debug output.")
                 .addOption("h", "help", false, "Show this usage information.")
                 .addOption("o", "out", true, "Write compiler output to the given file.")
+                .addOption("p", "port", true, "Designate a port for the analysis server to listen on.")
+                .addOption("pos", "position", true, "Specifies a buffer index at which to run code completion.")
+                .addOption(Option.builder().longOpt("repl").hasArg(false).desc("Run the interactive REPL.").build())
                 .addOption("stdin", "read-stdin", false, "Interpret input from stdin.")
                 .addOption("stdout", "write-stdout", false, "Print compiler output to stdout.")
                 .addOption("v", "version", false, "Print the interpreter version.");
-        return options;
     }
 
     private static FrayPipeline createPipeline() {
