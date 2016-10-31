@@ -121,4 +121,5 @@ jspm_packages
 .node_repl_history
 
 example/**/*.js
+src/test/fray/**/*.js
 

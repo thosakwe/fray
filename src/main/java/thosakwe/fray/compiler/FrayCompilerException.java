@@ -1,7 +1,6 @@
 package thosakwe.fray.compiler;
 
 import org.antlr.v4.runtime.ParserRuleContext;
-import thosakwe.fray.lang.pipeline.FrayAsset;
 
 public class FrayCompilerException extends Exception {
     private final FrayCompiler compiler;

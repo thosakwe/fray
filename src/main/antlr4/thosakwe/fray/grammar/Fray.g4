@@ -124,7 +124,7 @@ statement:
     | main=ifBlock (ELSE elseIf+=ifBlock)* elseBlock? #IfStatement
     | WHILE PAREN_L condition=expression PAREN_R block #WhileStatement
     | DO block WHILE PAREN_L condition=expression PAREN_R #DoWhileStatement
-    | TRY tryBlock=block ((catchBlock finallyBlock?) | (catchBlock? finallyBlock))? #TryStatement
+    | TRY tryBlock=block ((catchBlock finallyBlock?) | (catchBlock? finallyBlock) | (catchBlock finallyBlock))? #TryStatement
 ;
 
 catchBlock: CATCH PAREN_L name=IDENTIFIER PAREN_R block;

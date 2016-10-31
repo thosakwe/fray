@@ -2,8 +2,8 @@ package thosakwe.fray.compiler;
 
 import thosakwe.fray.grammar.FrayBaseVisitor;
 import thosakwe.fray.grammar.FrayParser;
-import thosakwe.fray.lang.pipeline.FrayAsset;
-import thosakwe.fray.lang.pipeline.FrayTransformer;
+import thosakwe.fray.interpreter.pipeline.FrayAsset;
+import thosakwe.fray.interpreter.pipeline.FrayTransformer;
 
 import java.io.IOException;
 

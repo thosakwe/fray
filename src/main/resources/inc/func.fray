@@ -5,6 +5,25 @@ class FunctionalWrapper {
         this.source = source;
     }
 
+    fn all(callback) {
+        for (i : this.source) {
+            callback(i);
+        }
+
+        ret this;
+    }
+
+    fn map(callback) {
+        final source = [];
+
+        for (i : this.source) {
+            source.add(callback(i));
+        }
+
+        this.source = source;
+        ret new FunctionalWrapper(source);
+    }
+
     fn sum() {
         let s = 0;
 

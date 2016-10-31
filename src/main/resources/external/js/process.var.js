@@ -1,0 +1,1 @@
+var process = {version: 'Fray to JavaScript Compiler'};

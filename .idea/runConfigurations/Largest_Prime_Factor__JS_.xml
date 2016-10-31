@@ -3,7 +3,7 @@
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
     <option name="MAIN_CLASS_NAME" value="thosakwe.fray.cli.Main" />
     <option name="VM_PARAMETERS" value="" />
-    <option name="PROGRAM_PARAMETERS" value="1_largest_prime_factor.fray -to js -o 1_largest_prime_factor.js" />
+    <option name="PROGRAM_PARAMETERS" value="1_largest_prime_factor.fray -to js -o 1_largest_prime_factor.js --verbose" />
     <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$/example/euler" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />

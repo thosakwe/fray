@@ -10,10 +10,10 @@ class TestSuite {
     }
 
     fn _run() {
-        tests.forEach((name, run) {
-           try
+        this.tests.forEach((name, run) {
+           try {
                 print('\033[32mSUCCESS: %name');
-           catch(e) {
+            } catch(e) {
                 print(e.message);
                 print(e.stack);
                 print('\033[31mFAILURE: %name');
@@ -31,16 +31,16 @@ class TestRunner {
     final _rootSuite = new TestSuite();
     final _suites = [_rootSuite];
 
-    fn run() => F.src(_suites).all(suite => suite._run());
+    fn run() => F.src(this._suites).all(suite => suite._run());
 
     fn suite(name) {
-        final suite = new Suite(name);
-        _suites.add(suite);
+        final suite = new TestSuite(name);
+        this._suites.add(suite);
         return suite;
     }
 
     fn test(name, test) {
-        this._rootSuite(name, test);
+        this._rootSuite.test(name, test);
         return this;
     }
 }

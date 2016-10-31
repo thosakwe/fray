@@ -6,18 +6,20 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import thosakwe.fray.Fray;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
-import thosakwe.fray.lang.FrayInterpreter;
-import thosakwe.fray.lang.pipeline.FrayAsset;
-import thosakwe.fray.lang.pipeline.FrayPipeline;
-import thosakwe.fray.lang.pipeline.FrayTransformer;
-import thosakwe.fray.lang.pipeline.StringInterpolatorTransformer;
+import thosakwe.fray.interpreter.FrayInterpreter;
+import thosakwe.fray.interpreter.pipeline.FrayAsset;
+import thosakwe.fray.interpreter.pipeline.FrayPipeline;
+import thosakwe.fray.interpreter.pipeline.FrayTransformer;
+import thosakwe.fray.interpreter.pipeline.StringInterpolatorTransformer;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class FrayToJavaScriptCompiler extends FrayCompiler {
     public FrayToJavaScriptCompiler(FrayAsset sourceAsset, boolean debug) {
@@ -58,17 +60,22 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
     }
 
     private void printArgs(List<FrayParser.ExpressionContext> expressions, CodeBuilder builder) {
+        final List<String> args = new ArrayList<>();
+
         for (int i = 0; i < expressions.size(); i++) {
+            args.add(visitExpression(expressions.get(i)));
+        }
+
+        for (int i = 0; i < args.size(); i++) {
             if (i > 0)
                 builder.write(", ");
-            builder.write(visitExpression(expressions.get(i)));
+            builder.write(args.get(i));
         }
     }
 
     private void printArgs(List<FrayParser.ExpressionContext> expressions) {
         printArgs(expressions, builder);
     }
-
 
     private InputStream resolveImport(FrayParser.ImportSourceContext source) throws FrayCompilerException, IOException {
         InputStream inputStream;
@@ -84,7 +91,7 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
                 throw new FrayCompilerException(String.format("Failed to import library %s. Invalid location.", source.getText()), source, this);
 
             printDebug(String.format("Importing stdlib: '%s'", url));
-            inputStream =  url.openStream();
+            inputStream = url.openStream();
         } else if (source.expression() instanceof FrayParser.StringLiteralExpressionContext) {
             name = source.expression().getText().replaceAll("(^')|('$)", "");
             resourceName = name + ".fray";
@@ -97,19 +104,48 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
         return pipeline.transform(asset).getInputStream();
     }
 
+    private void shimExternal(String name, String prefix) {
+        final String resourceName = String.format("external/js/%s.%s.js", name, prefix);
+        printDebug(String.format("Shimming top-level function: %s from '%s'...", name, resourceName));
+        final URL url = FrayToJavaScriptCompiler.class.getClassLoader().getResource(resourceName);
+        printDebug(String.format("URL: '%s'", url));
+
+        try {
+            if (url == null)
+                throw new NullPointerException();
+
+            final InputStream resource = url.openStream();
+            final Scanner resourceScanner = new Scanner(resource);
+            builder.println();
+
+            while (resourceScanner.hasNextLine()) {
+                builder.println(resourceScanner.nextLine());
+            }
+
+            builder.println();
+            resourceScanner.close();
+        } catch (Exception exc) {
+            printDebug("Hm, couldn't open resource... :/");
+            System.err.println(String.format("Could not find definition for external '%s'.", name));
+            System.exit(1);
+        }
+    }
+
     @Override
     public Object visitBlock(FrayParser.BlockContext ctx) {
-        ctx.statement().forEach(stmt -> {
-            printDebug(String.format("GOT TO BE THERE: %S", stmt.getText()));
-            visitStatement(stmt);
-        });
-
+        ctx.statement().forEach(this::visitStatement);
         return null;
     }
 
     @Override
     public Object visitClassDefinition(FrayParser.ClassDefinitionContext ctx) {
         final String className = ctx.name.getText();
+
+        if (Fray.annotationsContainExternal(ctx.annotation())) {
+            shimExternal(className, "class");
+            return null;
+        }
+
         builder.print(String.format("function %s(", className));
         builder.writeln(") {");
         // All members
@@ -220,6 +256,17 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             return ctx.getText();
         }
 
+        if (ctx instanceof FrayParser.FunctionExpressionContext) {
+            builder.print("function __func(");
+            printParams(((FrayParser.FunctionExpressionContext) ctx).functionBody().parameters().IDENTIFIER());
+            builder.writeln(") {");
+            builder.indent();
+            visitFunctionBody(((FrayParser.FunctionExpressionContext) ctx).functionBody());
+            builder.outdent();
+            builder.println("}");
+            return "__func";
+        }
+
         if (ctx instanceof FrayParser.IdentifierExpressionContext) {
             return ((FrayParser.IdentifierExpressionContext) ctx).IDENTIFIER().getText();
         }
@@ -228,16 +275,16 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             final FrayParser.InclusiveRangeExpressionContext inclusiveRangeExpressionContext = (FrayParser.InclusiveRangeExpressionContext) ctx;
             final String lower = visitExpression(inclusiveRangeExpressionContext.lower);
             final String upper = visitExpression(inclusiveRangeExpressionContext.upper);
-            final StringWriter builder = new StringWriter();
-            builder.write("(function () {");
-            builder.write("var a = [];");
-            builder.write(String.format("for (var i = %s; i <= %s; i++) {", lower, upper));
-            builder.write("a.push(i);");
-            builder.write("}");
-            builder.write("a.iterator = new Iterator('', a);");
-            builder.write("return a;");
-            builder.write("})()");
-            return builder.toString();
+            final StringWriter writer = new StringWriter();
+            writer.write("(function () {");
+            writer.write("var a = [];");
+            writer.write(String.format("for (var i = %s; i <= %s; i++) {", lower, upper));
+            writer.write("a.push(i);");
+            writer.write("}");
+            writer.write("a.iterator = new Iterator('', a);");
+            writer.write("return a;");
+            writer.write("})()");
+            return writer.toString();
         }
 
         if (ctx instanceof FrayParser.InvocationExpressionContext) {
@@ -359,12 +406,43 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
     public Object visitImportDeclaration(FrayParser.ImportDeclarationContext ctx) {
         try {
             // Todo: of, as...
+            final ANTLRInputStream inputStream = new ANTLRInputStream(resolveImport(ctx.source));
+            final FrayLexer lexer = new FrayLexer(inputStream);
+            final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+            final FrayParser parser = new FrayParser(tokenStream);
+            final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
+
             if (ctx.importAs() == null && ctx.importOf() == null) {
-                final ANTLRInputStream inputStream = new ANTLRInputStream(resolveImport(ctx.source));
-                final FrayLexer lexer = new FrayLexer(inputStream);
-                final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
-                final FrayParser parser = new FrayParser(tokenStream);
-                visitCompilationUnit(parser.compilationUnit());
+                visitCompilationUnit(compilationUnit);
+            } else if (ctx.importAs() != null) {
+                if (ctx.importOf() == null) {
+                    final String alias = ctx.importAs().alias.getText();
+                    builder.println(String.format("var %s = {};", alias));
+
+                    for (FrayParser.TopLevelDefinitionContext topLevelDefinitionContext : compilationUnit.topLevelDefinition()) {
+                        if (topLevelDefinitionContext.topLevelFunctionDefinition() != null) {
+                            final FrayParser.TopLevelFunctionDefinitionContext def = topLevelDefinitionContext.topLevelFunctionDefinition();
+                            final String functionName = def.functionSignature().name.getText();
+                            builder.print(String.format("%s.%s = function(", alias, functionName));
+                            printParams(def.functionBody().parameters().IDENTIFIER());
+                            builder.writeln(") {");
+                            builder.indent();
+                            visitFunctionBody(def.functionBody());
+                            builder.outdent();
+                            builder.println("};");
+                        } else if (topLevelDefinitionContext.classDefinition() != null) {
+                            final String className = topLevelDefinitionContext.classDefinition().name.getText();
+                            visitClassDefinition(topLevelDefinitionContext.classDefinition());
+                            builder.println(String.format("%s.%s = %s;", alias, className, className));
+                        } else if (topLevelDefinitionContext.topLevelVariableDeclaration() != null) {
+                            for (FrayParser.VariableDeclarationContext decl : topLevelDefinitionContext.topLevelVariableDeclaration().variableDeclaration()) {
+                                final String variableName = decl.name.getText();
+                                final String value = decl.expression() != null ? visitExpression(decl.expression()) : "null";
+                                builder.println(String.format("%s.%s = %s;", alias, variableName, value));
+                            }
+                        }
+                    }
+                }
             }
         } catch (FrayCompilerException exc) {
             exc.explain();
@@ -404,6 +482,38 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             builder.println(String.format("return %s;", visitExpression(expr)));
         }
 
+        if (ctx instanceof FrayParser.ThrowStatementContext) {
+            final String exception = visitExpression(((FrayParser.ThrowStatementContext) ctx).expression());
+            builder.println(String.format("throw %s;", exception));
+        }
+
+        if (ctx instanceof FrayParser.TryStatementContext) {
+            final FrayParser.TryStatementContext tryStatementContext = (FrayParser.TryStatementContext) ctx;
+            builder.println("try {");
+            builder.indent();
+            visitBlock(tryStatementContext.tryBlock);
+            builder.outdent();
+            builder.println("}");
+
+            if (tryStatementContext.catchBlock() != null) {
+                builder.print("catch(");
+                builder.write(tryStatementContext.catchBlock().name.getText());
+                builder.writeln(") {");
+                builder.indent();
+                visitBlock(tryStatementContext.catchBlock().block());
+                builder.outdent();
+                builder.println("}");
+            }
+
+            if (tryStatementContext.finallyBlock() != null) {
+                builder.println("finally {");
+                builder.indent();
+                visitBlock(tryStatementContext.finallyBlock().block());
+                builder.outdent();
+                builder.println("}");
+            }
+        }
+
         if (ctx instanceof FrayParser.VariableDeclarationStatementContext) {
             for (FrayParser.VariableDeclarationContext decl : ((FrayParser.VariableDeclarationStatementContext) ctx).variableDeclaration()) {
                 final String name = decl.name.getText();
@@ -429,16 +539,10 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
     @Override
     public String visitTopLevelFunctionDefinition(FrayParser.TopLevelFunctionDefinitionContext ctx) {
         if (Fray.annotationsContainExternal(ctx.functionSignature().annotation())) {
-            // Todo: Shim external functions
-            if (ctx.functionSignature().name.getText().equals("print")) {
-                builder.println("function print(x) {");
-                builder.indent();
-                builder.println("console.log(x.str !== undefined ? x.str() : x);");
-                builder.outdent();
-                builder.println("}");
-            }
+            shimExternal(ctx.functionSignature().name.getText(), "func");
         } else {
             final String name = ctx.functionSignature().name.getText();
+            builder.println();
             builder.print(String.format("function %s(", name));
             printParams(ctx.functionBody().parameters().IDENTIFIER());
             builder.writeln(") {");
@@ -448,7 +552,25 @@ public class FrayToJavaScriptCompiler extends FrayCompiler {
             builder.println("}");
         }
 
-        builder.println();
+        return null;
+    }
+
+    @Override
+    public Object visitTopLevelVariableDeclaration(FrayParser.TopLevelVariableDeclarationContext ctx) {
+        final boolean hasExternal = Fray.annotationsContainExternal(ctx.annotation());
+
+        for (FrayParser.VariableDeclarationContext decl : ctx.variableDeclaration()) {
+            final String name = decl.name.getText();
+
+            if (hasExternal) {
+                shimExternal(name, "var");
+            } else {
+                if (decl.expression() != null) {
+                    builder.println(String.format("var %s = %s;", name, visitExpression(decl.expression())));
+                } else builder.println(String.format("var %s;", name));
+            }
+        }
+
         return null;
     }
 }

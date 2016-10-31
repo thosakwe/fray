@@ -1,7 +1,7 @@
 package pipeline;
 
 import org.junit.Test;
-import thosakwe.fray.lang.pipeline.FrayAsset;
+import thosakwe.fray.interpreter.pipeline.FrayAsset;
 
 import static org.junit.Assert.assertEquals;
 

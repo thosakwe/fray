@@ -2,7 +2,7 @@ name: fray
 description: Interpreter/compiler with an emphasis on code transformation and reflection.
 version: 1.0.0-dev
 author: Tobe O <thosakwe@gmail.com>
-homepage: https://github.com/fray-lang/fray
+homepage: https://github.com/fray-interpreter/fray
 environment:
   sdk: ">=1.8.0"
 dependencies:

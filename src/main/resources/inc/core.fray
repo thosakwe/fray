@@ -2,16 +2,13 @@ final external = '[shimmed at compile time]';
 
 @external
 class Exception {
-    let message, stack;
+    final message, stack;
 
-    constructor(message) {
-        this.message = message;
-    }
+    constructor(message) {}
 }
 
-@external
 class Iterator {
-    let current, i = -1, items;
+    let current, i, items;
 
     constructor(items) {
         this.items = items;
@@ -33,34 +30,6 @@ class Iterator {
         }
 
         ret null;
-    }
-}
-
-@external
-class Set {
-    final iterator;
-
-    constructor() {
-        Array.call(this);
-        this.iterator = new Iterator(this);
-    }
-
-    fn str() {
-        let str = '[', i = 0;
-
-        for (item : this) {
-            if (i > 0) {
-                str += ', ';
-            }
-
-            if (item.str != null) {
-                str += item.str();
-            } else {
-                str += item;
-            }
-        }
-
-        ret str + ']';
     }
 }
 

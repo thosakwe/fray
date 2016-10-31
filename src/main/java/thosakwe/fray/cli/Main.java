@@ -8,15 +8,15 @@ import thosakwe.fray.compiler.FrayCompiler;
 import thosakwe.fray.compiler.FrayToJavaScriptCompiler;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
-import thosakwe.fray.lang.FrayInterpreter;
-import thosakwe.fray.lang.pipeline.FrayAsset;
-import thosakwe.fray.lang.pipeline.FrayPipeline;
-import thosakwe.fray.lang.data.FrayDatum;
-import thosakwe.fray.lang.data.FrayFunction;
-import thosakwe.fray.lang.data.FrayNumber;
-import thosakwe.fray.lang.errors.FrayException;
-import thosakwe.fray.lang.pipeline.FrayTransformer;
-import thosakwe.fray.lang.pipeline.StringInterpolatorTransformer;
+import thosakwe.fray.interpreter.FrayInterpreter;
+import thosakwe.fray.interpreter.pipeline.FrayAsset;
+import thosakwe.fray.interpreter.pipeline.FrayPipeline;
+import thosakwe.fray.interpreter.data.FrayDatum;
+import thosakwe.fray.interpreter.data.FrayFunction;
+import thosakwe.fray.interpreter.data.FrayNumber;
+import thosakwe.fray.interpreter.errors.FrayException;
+import thosakwe.fray.interpreter.pipeline.FrayTransformer;
+import thosakwe.fray.interpreter.pipeline.StringInterpolatorTransformer;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -147,6 +147,7 @@ public class Main {
             System.exit(1);
         } catch (Exception exc) {
             System.err.println(exc.getMessage());
+            exc.printStackTrace();
             System.exit(1);
         }
     }
