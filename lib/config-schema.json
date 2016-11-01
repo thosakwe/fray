@@ -7,8 +7,8 @@
   "port": {
     "description": "The port to run the Fray analysis server on.",
     "type": "integer",
-    "default": 0,
-    "minimum": 0,
+    "default": 2357,
+    "minimum": 1,
     "maximum": 65535
   },
   "enableVerboseCompilerOutput": {

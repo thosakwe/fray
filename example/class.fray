@@ -10,7 +10,6 @@ class Foo {
 
 fn main() {
     final foo = new Foo();
-
     print('a: %{foo.a}, b: %{foo.b}, c: %{foo.c}');
     print(Foo);
     print(foo);

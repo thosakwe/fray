@@ -11,7 +11,6 @@ import thosakwe.fray.pipeline.FrayTransformer;
 import thosakwe.fray.pipeline.StringInterpolatorTransformer;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.ServerSocket;
@@ -20,8 +19,10 @@ import java.net.SocketAddress;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class FrayAnalysisServer {
+    public static final int REQUEST_CODE_COMPLETION = 34;
     private final boolean debug;
     private final List<SocketAddress> subscribers = new ArrayList<>();
     private final FrayPipeline pipeline = new FrayPipeline(new FrayTransformer[]{new StringInterpolatorTransformer()});
@@ -34,7 +35,6 @@ public class FrayAnalysisServer {
         try {
             final WatchService service = FileSystems.getDefault().newWatchService();
             final WatchKey key = new File("").getAbsoluteFile().toPath().register(service, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY);
-            FrayParser parser = null;
 
             while (true) {
                 for (WatchEvent ev : key.pollEvents()) {
@@ -45,12 +45,7 @@ public class FrayAnalysisServer {
                     final ANTLRInputStream inputStream = new ANTLRInputStream(output.getInputStream());
                     final FrayLexer lexer = new FrayLexer(inputStream);
                     final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
-
-                    if (parser == null)
-                        parser = new FrayParser(tokenStream);
-                    else {
-                        parser.setInputStream(tokenStream);
-                    }
+                    final FrayParser parser = new FrayParser(tokenStream);
 
                     final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
                     printDebug(String.format("Source from '%s': \n'%s'", filename.toString(), compilationUnit.getText()));
@@ -98,10 +93,29 @@ public class FrayAnalysisServer {
             try {
                 final Socket client = socket.accept();
                 subscribers.add(client.getRemoteSocketAddress());
-                final PrintStream out = new PrintStream(client.getOutputStream());
-                out.print(200);
-                out.close();
-                client.close();
+
+                // Check if suggestion
+                final Scanner scanner = new Scanner(client.getInputStream());
+                if (scanner.nextInt() == REQUEST_CODE_COMPLETION) {
+                    final int row = scanner.nextInt();
+                    final int col = scanner.nextInt();
+                    final String filename = scanner.nextLine();
+                    final ANTLRInputStream inputStream = new ANTLRFileStream(filename);
+                    final FrayLexer lexer = new FrayLexer(inputStream);
+                    final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
+                    final FrayParser parser = new FrayParser(tokenStream);
+                    final FrayAnalyzer analyzer = new FrayAnalyzer(debug);
+                    analyzer.analyzeProgram(parser.compilationUnit());
+                    final PrintStream out = new PrintStream(client.getOutputStream());
+                    analyzer.codeCompletion(out, row, col);
+                    out.close();
+                    client.close();
+                } else {
+                    final PrintStream out = new PrintStream(client.getOutputStream());
+                    out.print(socket.getLocalPort());
+                    out.close();
+                    client.close();
+                }
             } catch (Exception exc) {
                 System.err.println(String.format("Analysis server error on client: %s", exc.getMessage()));
                 exc.printStackTrace();

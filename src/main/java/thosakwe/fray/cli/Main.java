@@ -51,7 +51,7 @@ public class Main {
             final FrayPipeline pipeline = createPipeline();
             pipeline.setDebug(commandLine.hasOption("verbose"));
 
-            if (commandLine.hasOption("analyzeProgram")) {
+            if (commandLine.hasOption("analyze")) {
                 final int port = Integer.parseInt(commandLine.getOptionValue("port", "0"));
                 final FrayAnalysisServer analysisServer = new FrayAnalysisServer(commandLine.hasOption("verbose"));
                 final ServerSocket serverSocket = analysisServer.listen(port);
@@ -62,7 +62,8 @@ public class Main {
 
             if (commandLine.hasOption("code-completion")) {
                 final String filename = commandLine.getOptionValue("code-completion");
-                final int position = Integer.parseInt(commandLine.getOptionValue("position", "-1"));
+                final int row = Integer.parseInt(commandLine.getOptionValue("row", "-1"));
+                final int col = Integer.parseInt(commandLine.getOptionValue("col", "-1"));
 
                 final ANTLRInputStream inputStream = new ANTLRFileStream(filename);
                 final FrayLexer lexer = new FrayLexer(inputStream);
@@ -71,18 +72,7 @@ public class Main {
                 final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
                 final FrayAnalyzer analyzer = new FrayAnalyzer(commandLine.hasOption("verbose"));
                 analyzer.analyzeProgram(compilationUnit);
-
-                for (Symbol symbol : analyzer.getSymbolTable().allUnique(true)) {
-                    final ParseTree sourceTree = symbol.getValue().getSource();
-
-                    if (sourceTree instanceof ParserRuleContext) {
-                        final ParserRuleContext source = (ParserRuleContext) sourceTree;
-
-                        if (source.start.getStartIndex() <= position || position == -1) {
-                            System.out.printf("%s:%s%n", symbol.getName(), symbol.getValue().getType().getName());
-                        }
-                    }
-                }
+                analyzer.codeCompletion(System.out, row, col);
 
                 return;
             }
@@ -200,12 +190,14 @@ public class Main {
         return new Options()
                 .addOption("a", "analyze", false, "Start the Fray analysis server.")
                 .addOption("cc", "code-completion", true, "Spits out all symbol names available at the given index within a source file.")
+                .addOption("col", "column", true, "Specifies a column for code completion.")
                 .addOption("to", "compile", true, "Compile Fray source to another language (js/javascript, dart).")
                 .addOption("debug", "verbose", false, "Enable verbose debug output.")
                 .addOption("h", "help", false, "Show this usage information.")
                 .addOption("o", "out", true, "Write compiler output to the given file.")
+                .addOption(Option.builder().longOpt("offline").hasArg(false).desc("Prints suggestion to stdout, rather than starting a server.").build())
                 .addOption("p", "port", true, "Designate a port for the analysis server to listen on.")
-                .addOption("pos", "position", true, "Specifies a buffer index at which to run code completion.")
+                .addOption("r", "row", true, "Specifies a row for code completion.")
                 .addOption(Option.builder().longOpt("repl").hasArg(false).desc("Run the interactive REPL.").build())
                 .addOption("stdin", "read-stdin", false, "Interpret input from stdin.")
                 .addOption("stdout", "write-stdout", false, "Print compiler output to stdout.")
@@ -217,7 +209,7 @@ public class Main {
     }
 
     private static void printUsage(Options options) {
-        new HelpFormatter().printHelp("fray [args...] <filenames>", options);
+        new HelpFormatter().printHelp("fray [args...] <filename>", options);
     }
 
     private static void runRepl(FrayPipeline pipeline, CommandLine commandLine) throws FrayException {

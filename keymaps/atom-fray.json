@@ -1,5 +1,5 @@
 {
   "atom-text-editor": {
-    "cmd-shift-b": "atom-fray:compile-js"
+    "cmd-ctrl-shift-b": "atom-fray:compile-js"
   }
 }

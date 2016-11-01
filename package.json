@@ -8,6 +8,13 @@
     "example": "example",
     "test": "test"
   },
+  "providedServices": {
+    "autocomplete.provider": {
+      "versions": {
+        "2.0.0": "provide"
+      }
+    }
+  },
   "engines": {
     "atom": "*"
   },

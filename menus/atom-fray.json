@@ -9,6 +9,10 @@
             {
               "label": "Compile to JS",
               "command": "atom-fray:compile-js"
+            },
+            {
+              "label": "Start/Re-start Analysis Server",
+              "command": "atom-fray:start-analyzer"
             }
           ]
         }
