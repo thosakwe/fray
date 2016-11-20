@@ -29,6 +29,10 @@ public class FrayPipeline {
         this.transformers.addAll(transformers);
     }
 
+    public FrayPipeline(FrayTransformer transformer) {
+        this.transformers.add(transformer);
+    }
+
     public FrayPipeline chain(FrayPipeline other) {
         final FrayPipeline pipeline = new FrayPipeline();
         pipeline.transformers.addAll(transformers);

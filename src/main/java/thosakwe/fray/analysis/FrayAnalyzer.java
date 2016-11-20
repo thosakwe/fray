@@ -2,7 +2,6 @@ package thosakwe.fray.analysis;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
-import thosakwe.fray.grammar.FrayBaseVisitor;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.lang.FrayFunction;
 
@@ -12,7 +11,7 @@ import java.io.PrintStream;
  * Created on 10/31/2016.
  */
 public class FrayAnalyzer  {
-    private final StructuredScope symbolTable = new StructuredScope();
+    private final StructuredScope symbolTable = new StructuredScope("TODO");
     private final boolean debug;
 
     public FrayAnalyzer(boolean debug) {
@@ -30,7 +29,7 @@ public class FrayAnalyzer  {
             if (topLevelDefinitionContext.topLevelFunctionDefinition() != null) {
                 final FrayParser.TopLevelFunctionDefinitionContext def = topLevelDefinitionContext.topLevelFunctionDefinition();
                 final String name = def.functionSignature().name.getText();
-                symbolTable.put(name, new FrayFunction(def, null));
+                // Todo: CODE COMPLETION symbolTable.put(name, new FrayFunction(def, null));
                 analyzeTopLevelFunction(def);
             }
         }
@@ -45,7 +44,7 @@ public class FrayAnalyzer  {
     }
 
     public void codeCompletion(PrintStream out, int line, int col) {
-        for (Symbol symbol : symbolTable.allUnique(true)) {
+        /* for (AnalysisSymbol symbol : symbolTable.allUnique(true)) {
             final ParseTree sourceTree = symbol.getValue().getSource();
 
             if (sourceTree instanceof ParserRuleContext) {
@@ -56,6 +55,6 @@ public class FrayAnalyzer  {
                     out.printf("%s:%s%n", symbol.getName(), symbol.getValue().getType().getName());
                 }
             }
-        }
+        } */
     }
 }

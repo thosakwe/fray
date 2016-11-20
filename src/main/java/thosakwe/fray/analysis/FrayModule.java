@@ -1,8 +1,6 @@
 package thosakwe.fray.analysis;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -10,13 +8,13 @@ import java.util.Map;
  */
 public class FrayModule {
     private final String name;
-    private final StructuredScope scope = new StructuredScope();
+    private final StructuredScope scope;
     private final String source;
     private final Map<String, AnalysisSymbol> exportedSymbols = new HashMap<>();
 
     public FrayModule(String name, String source) {
         this.name = name;
-        this.source = source;
+        this.scope = new StructuredScope(this.source = source);
     }
 
     public String getName() {
