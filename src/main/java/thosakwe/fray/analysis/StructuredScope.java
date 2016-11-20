@@ -1,5 +1,6 @@
 package thosakwe.fray.analysis;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import thosakwe.fray.lang.FrayDatum;
 
 import java.util.ArrayList;
@@ -49,6 +50,18 @@ public class StructuredScope {
 
     public Symbol putFinal(String name, FrayDatum value) {
         final Symbol result = put(name, value);
+        result.markAsFinal();
+        return result;
+    }
+
+    public Symbol put(String name, ParserRuleContext source) {
+        final Symbol result = new Symbol(name, source);
+        current.symbols.add(result);
+        return result;
+    }
+
+    public Symbol putFinal(String name, ParserRuleContext source) {
+        final Symbol result = put(name, source);
         result.markAsFinal();
         return result;
     }

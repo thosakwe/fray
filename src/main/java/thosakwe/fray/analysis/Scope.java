@@ -142,7 +142,7 @@ public class Scope {
         if (resolved != null)
             return resolved;
         else {
-            final Symbol symbol = new Symbol(name, null);
+            final Symbol symbol = new Symbol(name);
             getInnerMostScope().symbols.add(symbol);
             return symbol;
         }
