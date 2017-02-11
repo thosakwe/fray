@@ -33,6 +33,8 @@ class Iterator {
     }
 }
 
-@external fn print(msg) {}
+@external
+fn print(msg) {}
 
-@external final process;
+@external
+final process;

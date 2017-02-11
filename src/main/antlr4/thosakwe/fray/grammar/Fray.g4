@@ -1,7 +1,7 @@
 // Todo: continue, break
 grammar Fray;
 
-SHEBANG: '#!' ~('\n')* -> channel(SHEBANG);
+SHEBANG: '#!' ~('\n')* -> channel(HIDDEN);
 SL_CMT: ('#' | '//') ~('\n')* -> channel(HIDDEN);
 WS: (' ' | '\n' | '\r' | '\r\n') -> skip;
 
