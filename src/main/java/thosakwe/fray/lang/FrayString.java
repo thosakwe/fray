@@ -24,6 +24,14 @@ public class FrayString extends FrayDatum {
         return new FrayString(source, getInterpreter(), value + right.toString());
     }
 
+    public static FrayDatum parse(String str) {
+        try {
+            return new FrayString(null, null, String.valueOf(str));
+        } catch (FrayException exc) {
+            return null;
+        }
+    }
+
     @Override
     public String toString() {
         return value;

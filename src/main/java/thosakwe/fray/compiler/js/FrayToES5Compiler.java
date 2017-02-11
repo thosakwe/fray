@@ -1,9 +1,12 @@
-package thosakwe.fray.compiler;
+package thosakwe.fray.compiler.js;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import thosakwe.fray.Fray;
+import thosakwe.fray.compiler.CodeBuilder;
+import thosakwe.fray.compiler.FrayCompilerException;
+import thosakwe.fray.compiler.FrayCompiler;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.interpreter.FrayInterpreter;
@@ -21,8 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-public class FrayToJavaScriptTranspiler extends FrayTranspiler {
-    public FrayToJavaScriptTranspiler(FrayAsset sourceAsset, boolean debug) {
+public class FrayToES5Compiler extends FrayCompiler {
+    public FrayToES5Compiler(FrayAsset sourceAsset, boolean debug) {
         super("JavaScript", "js", sourceAsset, debug);
     }
 
@@ -45,6 +48,29 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         builder.println("})();");
 
         return builder.toString();
+    }
+
+    public FrayTransformer toTransformer() {
+        final FrayCompiler self = this;
+
+        return new FrayTransformer() {
+            @Override
+            public boolean claim(FrayAsset asset) {
+                return asset.getExtension().equals("fray");
+            }
+
+            @Override
+            public String getName() {
+                return "Fray to ES5 Compiler";
+            }
+
+            @Override
+            public FrayAsset transform(FrayAsset asset) throws IOException {
+                final String src = asset.readAsString();
+                final FrayParser parser = parse(src);
+                return asset.changeText(compile(parser.compilationUnit())).changeExtension(getOutputExtension());
+            }
+        };
     }
 
     private void printParams(List<TerminalNode> trees, CodeBuilder builder) {
@@ -107,7 +133,7 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
     private void shimExternal(String name, String prefix) {
         final String resourceName = String.format("external/js/%s.%s.js", name, prefix);
         printDebug(String.format("Shimming top-level function: %s from '%s'...", name, resourceName));
-        final URL url = FrayToJavaScriptTranspiler.class.getClassLoader().getResource(resourceName);
+        final URL url = FrayToES5Compiler.class.getClassLoader().getResource(resourceName);
         printDebug(String.format("URL: '%s'", url));
 
         try {
@@ -131,13 +157,11 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         }
     }
 
-    @Override
     public Object visitBlock(FrayParser.BlockContext ctx) {
         ctx.statement().forEach(this::visitStatement);
         return null;
     }
 
-    @Override
     public Object visitClassDefinition(FrayParser.ClassDefinitionContext ctx) {
         final String className = ctx.name.getText();
 
@@ -212,7 +236,6 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         return null;
     }
 
-    @Override
     public String visitCompilationUnit(FrayParser.CompilationUnitContext ctx) {
         ctx.topLevelDefinition().forEach(this::visitTopLevelDefinition);
         return null;
@@ -368,7 +391,6 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         return String.format("'Cannot compile expressions of type %s yet. ):'", ctx.getClass().getSimpleName());
     }
 
-    @Override
     public Object visitFunctionBody(FrayParser.FunctionBodyContext ctx) {
         if (ctx.blockBody() != null) {
             ctx.blockBody().block().statement().forEach(this::visitStatement);
@@ -380,7 +402,6 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         return null;
     }
 
-    @Override
     public Object visitIfStatement(FrayParser.IfStatementContext ctx) {
         for (int i = 0; i < ctx.ifBlock().size(); i++) {
             final FrayParser.IfBlockContext ifBlockContext = ctx.ifBlock(i);
@@ -402,7 +423,6 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         return null;
     }
 
-    @Override
     public Object visitImportDeclaration(FrayParser.ImportDeclarationContext ctx) {
         try {
             // Todo: of, as...
@@ -536,7 +556,6 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         return null;
     }
 
-    @Override
     public String visitTopLevelFunctionDefinition(FrayParser.TopLevelFunctionDefinitionContext ctx) {
         if (Fray.annotationsContainExternal(ctx.functionSignature().annotation())) {
             shimExternal(ctx.functionSignature().name.getText(), "func");
@@ -555,7 +574,6 @@ public class FrayToJavaScriptTranspiler extends FrayTranspiler {
         return null;
     }
 
-    @Override
     public Object visitTopLevelVariableDeclaration(FrayParser.TopLevelVariableDeclarationContext ctx) {
         final boolean hasExternal = Fray.annotationsContainExternal(ctx.annotation());
 

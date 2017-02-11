@@ -47,6 +47,7 @@ public class FrayAsset {
     }
 
     public FrayAsset changeInputStream(InputStream newStream) throws IOException {
+        inputStream.close();
         return new FrayAsset(extension, sourcePath, name, newStream);
     }
 

@@ -3,27 +3,23 @@ package thosakwe.fray.cli;
 import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
 import org.apache.commons.cli.*;
 import thosakwe.fray.Fray;
 import thosakwe.fray.analysis.FrayAnalysisServer;
-import thosakwe.fray.analysis.Symbol;
 import thosakwe.fray.analysis.FrayAnalyzer;
-import thosakwe.fray.compiler.FrayTranspiler;
-import thosakwe.fray.compiler.FrayToJavaScriptTranspiler;
+import thosakwe.fray.compiler.FrayCompiler;
+import thosakwe.fray.compiler.js.FrayToES5Compiler;
+import thosakwe.fray.compiler.jvm.FrayToJvmCompiler;
 import thosakwe.fray.grammar.FrayLexer;
 import thosakwe.fray.grammar.FrayParser;
 import thosakwe.fray.interpreter.FrayInterpreter;
 import thosakwe.fray.lang.FrayLibrary;
-import thosakwe.fray.pipeline.FrayAsset;
-import thosakwe.fray.pipeline.FrayPipeline;
+import thosakwe.fray.pipeline.*;
 import thosakwe.fray.lang.FrayDatum;
 import thosakwe.fray.lang.FrayFunction;
 import thosakwe.fray.lang.FrayNumber;
 import thosakwe.fray.interpreter.errors.FrayException;
-import thosakwe.fray.pipeline.FrayTransformer;
-import thosakwe.fray.pipeline.StringInterpolatorTransformer;
+import thosakwe.fray.server.FHPServer;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -37,6 +33,7 @@ public class Main {
 
         try {
             final CommandLine commandLine = new DefaultParser().parse(options, args);
+            String[] rest = commandLine.getArgs();
 
             if (commandLine.hasOption("help")) {
                 printUsage(options);
@@ -45,6 +42,13 @@ public class Main {
 
             if (commandLine.hasOption("version")) {
                 System.out.println(Fray.VERSION);
+                return;
+            }
+
+            if (rest.length > 0 && rest[0].equals("serve")) {
+                String[] serverArgs = new String[rest.length - 1];
+                System.arraycopy(args, 1, serverArgs, 0, rest.length - 1);
+                serverMain(serverArgs);
                 return;
             }
 
@@ -84,7 +88,7 @@ public class Main {
 
             if (commandLine.hasOption("compile")) {
                 FrayAsset compilationAsset;
-                FrayTranspiler compiler;
+                FrayCompiler compiler;
 
                 if (commandLine.hasOption("read-stdin")) {
                     compilationAsset = new FrayAsset("fray", FrayPipeline.STDIN, FrayPipeline.STDIN, System.in);
@@ -103,32 +107,17 @@ public class Main {
                 switch (to) {
                     case "javascript":
                     case "js":
-                        compiler = new FrayToJavaScriptTranspiler(compilationAsset, commandLine.hasOption("verbose"));
+                        compiler = new FrayToES5Compiler(compilationAsset, commandLine.hasOption("verbose"));
+                        break;
+                    case "jvm":
+                        compiler = new FrayToJvmCompiler(compilationAsset, commandLine.hasOption("verbose"));
                         break;
                     default:
                         throw new Exception(String.format("Fray does not support compilation to %s. Yet. :)", to));
                 }
 
                 // Build a pipeline
-
-                final FrayTransformer coreImporter = new FrayTransformer() {
-                    @Override
-                    public boolean claim(FrayAsset asset) {
-                        return asset.getExtension().equals("fray");
-                    }
-
-                    @Override
-                    public String getName() {
-                        return "<core> Importer";
-                    }
-
-                    @Override
-                    public FrayAsset transform(FrayAsset asset) throws IOException {
-                        final String src = asset.readAsString();
-                        return asset.changeText("import <core>;\n" + src);
-                    }
-                };
-
+                final FrayTransformer coreImporter = new CoreImporterTransformer();
                 final FrayPipeline compilationPipeline = new FrayPipeline(new FrayTransformer[]{
                         coreImporter,
                         new StringInterpolatorTransformer(),
@@ -204,12 +193,19 @@ public class Main {
                 .addOption("v", "version", false, "Print the interpreter version.");
     }
 
+    private static Options serverCliOptions() {
+        return new Options()
+                .addOption("h", "host", true, "The host to run on (default: 127.0.0.1).")
+                .addOption("p", "port", true, "The port to listen on (default: 8080).")
+                .addOption("d", "verbose", false, "Print verbose debug output.");
+    }
+
     private static FrayPipeline createPipeline() {
         return FrayPipeline.DEFAULT;
     }
 
     private static void printUsage(Options options) {
-        new HelpFormatter().printHelp("fray [args...] <filename>", options);
+        new HelpFormatter().printHelp("fray [options...] <filename>", options);
     }
 
     private static void runRepl(FrayPipeline pipeline, CommandLine commandLine) throws FrayException {
@@ -305,6 +301,32 @@ public class Main {
             System.err.println(exc.getMessage());
             exc.printStackTrace();
             System.exit(1);
+        }
+    }
+
+    private static void serverMain(String[] args) {
+        try {
+            Options options = serverCliOptions();
+            CommandLine commandLine = new DefaultParser().parse(options, args);
+            List<String> rest = commandLine.getArgList();
+            String host = commandLine.getOptionValue("h", "127.0.0.1");
+            int port = Integer.parseInt(commandLine.getOptionValue("p", "8080"));
+            File dir;
+
+            if (rest.isEmpty())
+                dir = new File(".");
+            else dir = new File(rest.get(0));
+
+            if (!dir.exists() || !dir.isDirectory())
+                throw new InvalidObjectException(String.format("Entity at path \"%s\" is not a directory.", dir.getAbsolutePath()));
+
+            new FHPServer(host, port, dir, commandLine).start();
+        } catch (ParseException e) {
+            new HelpFormatter().printHelp("fray serve [options...] [directory]", serverCliOptions());
+            System.exit(1);
+        } catch (Exception e) {
+            System.err.printf("Error in FHP: %s%n", e.getMessage());
+            e.printStackTrace();
         }
     }
 }

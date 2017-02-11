@@ -41,6 +41,10 @@ public class FrayException extends Exception {
         }
     }
 
+    public static FrayException expectedAtLeast(int min) {
+        return new FrayException(String.format("Expected at least %d argument(s).", min), null, null);
+    }
+
     @Override
     public String toString() {
         return String.format("Unhandled exception: %s", message);

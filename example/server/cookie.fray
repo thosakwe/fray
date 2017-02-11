@@ -1,0 +1,9 @@
+fn main(req) {
+    print('%{req.cookies.size} cookies');
+
+    for (final cookie : req.cookies) {
+        print('%{cookie.name} => %{cookie.value}');
+    }
+
+    ret '<h1>You sent %{req.cookies.size} cookie(s)!</h1>';
+}
