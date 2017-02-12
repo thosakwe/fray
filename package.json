@@ -1,87 +1,90 @@
 {
-  "name": "fray-ide",
-  "version": "0.0.0",
-  "description": "VSCode/Atom IDE for Fray.",
-  "main": "./out/src/extension",
-  "publisher": "Tobe O",
-  "engines": {
-    "atom": "*",
-    "vscode": "^1.8.0"
-  },
-  "categories": [
-    "Languages",
-    "Snippets",
-    "Linters",
-    "Formatters",
-    "Debuggers"
-  ],
-  "keywords": [
-    "fray",
-    "fraylang",
-    "fray-lang",
-    "pub",
-    "pubspec"
-  ],
-  "icon": "media/icon.png",
-  "activationEvents": [
-    "onLanguage:fray"
-  ],
-  "contributes": {
-    "languages": [
-      {
-        "id": "fray",
-        "extensions": [
-          ".dart"
-        ],
-        "aliases": [
-          "Fray"
-        ],
-        "configuration": "./grammars/fray.json"
-      }
-    ],
-    "grammars": [
-      {
-        "language": "dart",
-        "scopeName": "source.dart",
-        "path": "./syntaxes/dart.json"
-      }
-    ]
-  },
-  "directories": {
-    "doc": "doc",
-    "example": "example",
-    "test": "test"
-  },
-  "providedServices": {
-    "autocomplete.provider": {
-      "versions": {
-        "2.0.0": "provide"
-      }
-    }
-  },
-  "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "compile": "csonc grammars/fray.cson > grammars/fray.json && tsc -watch -p ./",
-    "test": "node ./node_modules/vscode/bin/test",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test.old": "mocha test/javascript --compilers js:babel-core/register"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/fray-lang/fray.git"
-  },
-  "author": "Tobe O <thosakwe@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/fray-lang/fray/issues"
-  },
-  "homepage": "https://github.com/fray-lang/fray#readme",
-  "dependencies": {
-    "vscode-languageclient": "^2.6.3"
-  },
-  "devDependencies": {
-    "season": "^5.4.1",
-    "typescript": "^2.1.6",
-    "vscode": "^1.0.0"
-  }
+	"name": "fray-ide",
+	"version": "0.0.0",
+	"description": "VSCode/Atom IDE for Fray.",
+	"main": "./out/src/extension",
+	"publisher": "Tobe O",
+	"engines": {
+		"atom": "*",
+		"vscode": "^1.8.0"
+	},
+	"categories": [
+		"Languages",
+		"Snippets",
+		"Linters",
+		"Formatters",
+		"Debuggers"
+	],
+	"keywords": [
+		"fray",
+		"fraylang",
+		"fray-lang",
+		"pub",
+		"pubspec"
+	],
+	"icon": "media/icon.png",
+	"activationEvents": [
+		"onLanguage:fray"
+	],
+	"contributes": {
+		"languages": [
+			{
+				"id": "fray",
+				"extensions": [
+					".dart"
+				],
+				"aliases": [
+					"Fray"
+				],
+				"configuration": "./grammars/fray.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "dart",
+				"scopeName": "source.dart",
+				"path": "./syntaxes/dart.json"
+			}
+		]
+	},
+	"directories": {
+		"doc": "doc",
+		"example": "example",
+		"test": "test"
+	},
+	"providedServices": {
+		"autocomplete.provider": {
+			"versions": {
+				"2.0.0": "provide"
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "tsc -p ./",
+		"compile": "csonc grammars/fray.cson > grammars/fray.json && tsc -watch -p ./",
+		"test": "node ./node_modules/vscode/bin/test",
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test.old": "mocha test/javascript --compilers js:babel-core/register"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/fray-lang/fray.git"
+	},
+	"author": "Tobe O <thosakwe@gmail.com>",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/fray-lang/fray/issues"
+	},
+	"homepage": "https://github.com/fray-lang/fray#readme",
+	"dependencies": {
+		"vscode-languageclient": "^2.6.3"
+	},
+	"devDependencies": {
+		"season": "^5.4.1",
+		"typescript": "^2.1.6",
+		"vscode": "^1.0.0",
+		"@types/node": "^6.0.40",
+		"@types/mocha": "^2.2.32",
+		"@types/ws": "^0.0.38"
+	}
 }
