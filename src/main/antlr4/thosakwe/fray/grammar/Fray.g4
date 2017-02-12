@@ -84,7 +84,8 @@ topLevelDefinition:
     | topLevelFunctionDefinition
     | topLevelVariableDeclaration
     | classDefinition
-    | topLevelStatement;
+    //| topLevelStatement
+;
 
 emptyDeclaration: SEMI;
 importDeclaration: annotations=annotation* IMPORT importOf? source=importSource importAs? SEMI?;

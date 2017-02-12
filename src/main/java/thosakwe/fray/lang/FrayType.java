@@ -26,7 +26,8 @@ public abstract class FrayType extends FrayDatum {
     };
 
     private Map<String, FrayFunction> constructors = new HashMap<>();
-    private final FrayType parentType;
+
+    private FrayType parentType;
 
     public FrayType(ParseTree source, FrayInterpreter interpreter, FrayType parentType) {
         super(source, interpreter);
@@ -79,5 +80,21 @@ public abstract class FrayType extends FrayDatum {
 
     public Map<String, FrayFunction> getConstructors() {
         return constructors;
+    }
+
+    public boolean isAssignableTo(FrayType expectedType) {
+        FrayType search = this;
+
+        while (search != null) {
+            if (search == expectedType)
+                return true;
+            search = search.parentType;
+        }
+
+        return false;
+    }
+
+    public void setParentType(FrayType parentType) {
+        this.parentType = parentType;
     }
 }

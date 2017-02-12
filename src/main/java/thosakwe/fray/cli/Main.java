@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.commons.cli.*;
 import thosakwe.fray.Fray;
 import thosakwe.fray.analysis.FrayAnalysisServer;
-import thosakwe.fray.analysis.FrayAnalyzer;
+import thosakwe.fray.analysis.FrayStaticAnalyzer;
 import thosakwe.fray.compiler.FrayCompiler;
 import thosakwe.fray.compiler.js.FrayToES5Compiler;
 import thosakwe.fray.compiler.jvm.FrayToJvmCompiler;
@@ -74,8 +74,8 @@ public class Main {
                 final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
                 final FrayParser parser = new FrayParser(tokenStream);
                 final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
-                final FrayAnalyzer analyzer = new FrayAnalyzer(commandLine.hasOption("verbose"));
-                analyzer.analyzeProgram(compilationUnit);
+                final FrayStaticAnalyzer analyzer = new FrayStaticAnalyzer(sourceAsset, commandLine.hasOption("verbose"));
+                analyzer.analyzeCompilationUnit(compilationUnit);
                 analyzer.codeCompletion(System.out, row, col);
 
                 return;
