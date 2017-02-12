@@ -42,6 +42,11 @@
             <artifactId>asm</artifactId>
             <version>3.3.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse.lsp4j</groupId>
+            <artifactId>lsp4j</artifactId>
+            <version>0.2.0</version>
+        </dependency>
     </dependencies>
 
     <groupId>thosakwe</groupId>

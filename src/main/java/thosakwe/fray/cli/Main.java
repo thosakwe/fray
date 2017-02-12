@@ -74,7 +74,7 @@ public class Main {
                 final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
                 final FrayParser parser = new FrayParser(tokenStream);
                 final FrayParser.CompilationUnitContext compilationUnit = parser.compilationUnit();
-                final FrayStaticAnalyzer analyzer = new FrayStaticAnalyzer(sourceAsset, commandLine.hasOption("verbose"));
+                final FrayStaticAnalyzer analyzer = new FrayStaticAnalyzer(commandLine.hasOption("verbose"));
                 analyzer.analyzeCompilationUnit(compilationUnit);
                 analyzer.codeCompletion(System.out, row, col);
 

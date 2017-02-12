@@ -2,10 +2,12 @@ package thosakwe.fray.lang;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
+import thosakwe.fray.analysis.symbols.FrayTypeMember;
 import thosakwe.fray.interpreter.FrayInterpreter;
 import thosakwe.fray.interpreter.FrayStackElement;
 import thosakwe.fray.interpreter.errors.FrayException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,21 @@ public abstract class FrayType extends FrayDatum {
             return "Type";
         }
     };
+
+    public static final FrayType VOID = new FrayType(null, null, null) {
+        @Override
+        public String getName() {
+            return "void";
+        }
+    };
+    public static final FrayType FUNCTION = new FrayType(null, null, FrayType.OBJECT) {
+        @Override
+        public String getName() {
+            return "Function";
+        }
+    };
+
+    private final List<FrayTypeMember> members = new ArrayList<>();
 
     private Map<String, FrayFunction> constructors = new HashMap<>();
 
@@ -47,7 +64,7 @@ public abstract class FrayType extends FrayDatum {
                     getInterpreter().getSource().getSourcePath(),
                     (ParserRuleContext) source));
             getInterpreter().getStack().push(new FrayStackElement(
-                    constructorName.isEmpty() ? "constructor": constructorName,
+                    constructorName.isEmpty() ? "constructor" : constructorName,
                     getInterpreter().getSource().getSourcePath(),
                     (ParserRuleContext) constructor.getSource()));
             constructor.call(getInterpreter(), constructor.getSource(), args);
@@ -61,6 +78,10 @@ public abstract class FrayType extends FrayDatum {
     @Override
     public String curses() {
         return String.format("\033[36m%s", toString());
+    }
+
+    public List<FrayTypeMember> getMembers() {
+        return members;
     }
 
     public abstract String getName();
@@ -94,7 +115,7 @@ public abstract class FrayType extends FrayDatum {
         return false;
     }
 
-    public void setParentType(FrayType parentType) {
-        this.parentType = parentType;
+    public boolean isGeneric() {
+        return false;
     }
 }

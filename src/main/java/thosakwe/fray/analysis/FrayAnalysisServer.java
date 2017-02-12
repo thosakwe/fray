@@ -104,7 +104,7 @@ public class FrayAnalysisServer {
                     final FrayLexer lexer = new FrayLexer(inputStream);
                     final CommonTokenStream tokenStream = new CommonTokenStream(lexer);
                     final FrayParser parser = new FrayParser(tokenStream);
-                    final FrayStaticAnalyzer analyzer = new FrayStaticAnalyzer(sourceAsset, debug);
+                    final FrayStaticAnalyzer analyzer = new FrayStaticAnalyzer(debug);
                     analyzer.analyzeCompilationUnit(parser.compilationUnit());
                     final PrintStream out = new PrintStream(client.getOutputStream());
                     analyzer.codeCompletion(out, row, col);

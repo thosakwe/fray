@@ -1,0 +1,120 @@
+{
+  "scopeName": "source.fray",
+  "name": "Fray",
+  "foldingStartMarker": "\\{\\s*$",
+  "foldingStopMarker": "^\\s*\\}",
+  "fileTypes": [
+    "fray"
+  ],
+  "patterns": [
+    {
+      "captures": {
+        "1": {
+          "name": "comment.line.double-slash.fray"
+        }
+      },
+      "match": "((//).*)$"
+    },
+    {
+      "match": "\\b(catch|do|else|finally|for|if|ret|try|while)\\b",
+      "name": "keyword.control.fray"
+    },
+    {
+      "match": "\\b(as|class|constructor|export|extends|final|fn|is|import|let|new|of|super|throw)\\b",
+      "name": "keyword.other.fray"
+    },
+    {
+      "match": "\\b(true|false)\\b",
+      "name": "constant.language.fray"
+    },
+    {
+      "match": "\\b-?[0-9]+(.[0-9]+)?((e|E)-?[0-9]+)?",
+      "name": "constant.numeric.fray"
+    },
+    {
+      "match": "\\b0x[A-F0-9]+",
+      "name": "constant.numeric.fray"
+    },
+    {
+      "match": "\\b(this|null)\\b",
+      "name": "variable.language.fray"
+    },
+    {
+      "match": "\\b<.+>\\b",
+      "name": "string.other.fray"
+    },
+    {
+      "begin": "(?<!\\|r)'",
+      "end": "'",
+      "name": "string.interpolated.single.fray",
+      "patterns": [
+        {
+          "match": "\\n",
+          "name": "invalid.string.newline"
+        },
+        {
+          "include": "#string-interp"
+        }
+      ]
+    },
+    {
+      "begin": "r'",
+      "end": "'",
+      "name": "string.quoted.single.fray",
+      "patterns": [
+        {
+          "match": "\\n",
+          "name": "invalid.string.newline"
+        }
+      ]
+    },
+    {
+      "match": "\\b(fn)\\s*(($|[A-Za-z_])($|[A-Za-z0-9_])*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.fray"
+        },
+        "2": {
+          "name": "entity.name.function.fray"
+        }
+      },
+      "name": "meta.function.fray"
+    },
+    {
+      "match": "(@[A-Za-z_][A-Za-z0-9_]*)(\\([^\\)]*\\))?",
+      "captures": {
+        "1": {
+          "name": "storage.type.annotation.fray"
+        }
+      }
+    },
+    {
+      "match": "(($|[A-Za-z_])($|[A-Za-z0-9_])*)\\.(($|[A-Za-z_])($|[A-Za-z0-9_])*)",
+      "name": "variable.other.fray"
+    },
+    {
+      "match": "(?!for)(($|[A-Za-z_])($|[A-Za-z0-9_])*)\\s*\\(",
+      "captures": {
+        "1": {
+          "name": "entity.name.function.fray"
+        }
+      }
+    }
+  ],
+  "string-interp": {
+    "patterns": [
+      {
+        "captures": {
+          "3": {
+            "name": "variable.parameter.fray"
+          }
+        },
+        "match": "%((\\w+)|\\{(\\w+)\\})"
+      },
+      {
+        "match": "\\\\.",
+        "name": "constant.character.escape.fray"
+      }
+    ]
+  }
+}

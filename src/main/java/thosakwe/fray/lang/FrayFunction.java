@@ -12,13 +12,7 @@ public class FrayFunction extends FrayDatum {
     private List<FrayFunctionParameter> parameters = new ArrayList<>();
     private String name = null;
     private FrayType returnType = FrayType.OBJECT;
-
-    public static final FrayType TYPE = new FrayType(null, null, FrayType.OBJECT) {
-        @Override
-        public String getName() {
-            return "Function";
-        }
-    };
+    private FrayDatum thisContext = null;
 
     public FrayFunction(ParseTree source, FrayInterpreter interpreter) {
         super(source, interpreter);
@@ -52,9 +46,17 @@ public class FrayFunction extends FrayDatum {
         this.returnType = returnType;
     }
 
+    public FrayDatum getThisContext() {
+        return thisContext;
+    }
+
+    public void setThisContext(FrayDatum thisContext) {
+        this.thisContext = thisContext;
+    }
+
     @Override
     public FrayType getType() {
-        return TYPE;
+        return FrayType.FUNCTION;
     }
 
     @Override

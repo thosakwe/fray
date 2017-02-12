@@ -1,9 +1,9 @@
 package thosakwe.fray.compiler.jvm;
 
-import jdk.internal.org.objectweb.asm.ClassWriter;
-import jdk.internal.org.objectweb.asm.MethodVisitor;
-import jdk.internal.org.objectweb.asm.Opcodes;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 import thosakwe.fray.compiler.FrayCompiler;
 import thosakwe.fray.grammar.FrayBaseListener;
 import thosakwe.fray.grammar.FrayParser;
@@ -33,7 +33,7 @@ public class FrayToJvmCompiler extends FrayCompiler {
         // Push `this`
         mw.visitVarInsn(Opcodes.ALOAD, 0);
         // Invoke `super`
-        mw.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        mw.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
         mw.visitInsn(Opcodes.RETURN);
         // Max one stack elem, and one local variable
         mw.visitMaxs(1, 1);
@@ -64,7 +64,7 @@ public class FrayToJvmCompiler extends FrayCompiler {
         // Push `this`
         mw.visitVarInsn(Opcodes.ALOAD, 0);
         // Invoke `super`
-        mw.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        mw.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V");
         mw.visitInsn(Opcodes.RETURN);
         // Max one stack elem, and one local variable
         mw.visitMaxs(1, 1);

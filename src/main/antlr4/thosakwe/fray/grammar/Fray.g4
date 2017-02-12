@@ -84,7 +84,7 @@ topLevelDefinition:
     | topLevelFunctionDefinition
     | topLevelVariableDeclaration
     | classDefinition
-    //| topLevelStatement
+    | topLevelStatement
 ;
 
 emptyDeclaration: SEMI;
